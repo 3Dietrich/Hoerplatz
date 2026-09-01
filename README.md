@@ -33,7 +33,7 @@ Mittelsenkrechte zwischen den Boxen - überall darauf hörst du symmetrisch.
 | Hörplatz seitlich, Abstand | dein Platz, gemessen von der Mitte der vorderen Wand |
 | Bypass Laufzeit | lässt die Verzögerung unangetastet |
 | Bypass Pegel | lässt die Lautstärke unangetastet |
-| Testgeräusch | Impulse zum Einrichten; klingt beim Ausschalten in Stereo aus |
+| Testgeräusch | scharfe Impulse zum Einrichten; verdünnt sich beim Ausschalten ins Stereobild |
 | Ausgleich | wie weit die Pegelkorrektur geht; 100 % = `1/r`, Vorgabe 30 % |
 
 Die beiden Bypass-Schalter sind zum Vergleichen da: einmal mit, einmal ohne.
@@ -42,18 +42,21 @@ Der Unterschied ist deutlicher, als man erwartet.
 Unten rechts steht knapp, was gerade passiert: welche Seite korrigiert wird
 und um wieviel - Verzögerung in Millisekunden, Absenkung in Dezibel.
 
-**Zum Einrichten: das Testgeräusch.** Der Schalter ganz unten spielt weiche
-Impulse aus rosa Rauschen, auf beiden Kanälen gleich. Stimmen Laufzeit und
-Pegel, stehen sie als ein einziger Punkt zwischen den Boxen; stimmt etwas
-nicht, wandert oder verschmiert er. Die Impulse bringen beides mit, was man
-dafür braucht - einen Einschwinger für die Laufzeit und ein breites Band für
-den Pegel -, und zwischen ihnen ist Ruhe, damit man sie lange nebenher
-laufen lassen kann. Solange das Geräusch läuft, tritt die Musik zurück.
+**Zum Einrichten: das Testgeräusch.** Der Schalter ganz unten spielt kurze,
+scharfe Impulse aus rosa Rauschen, auf beiden Kanälen identisch. Die Flanke
+steht praktisch senkrecht - daran hängt alles: ein weicher Einsatz
+verschmiert Laufzeitunterschiede unterhalb weniger Millisekunden, und genau
+die will man hier beurteilen. Der kurze Nachhauch dahinter trägt das breite
+Band für den Pegel. Stimmt die Einstellung, steht das Geräusch als ein
+einziger Punkt zwischen den Boxen; stimmt sie nicht, wandert oder verschmiert
+er. Zwischen den Impulsen ist Ruhe, damit man es lange nebenher laufen lassen
+kann. Solange es läuft, tritt die Musik zurück.
 
-Beim Ausschalten hört es nicht einfach auf: aus dem Rauschen treten Töne
-hervor, die über knapp drei Sekunden ausklingen und dabei aus der Mitte nach
-außen wandern, leicht gegeneinander schwebend. Der Knopf leuchtet nach,
-solange die Fahne steht. Danach kommt die Musik zurück.
+Beim Ausschalten hört es nicht auf, sondern verdünnt sich: die beiden Kanäle
+bekommen zunehmend eigenes Rauschen statt des gemeinsamen, die Impulse rücken
+zusammen und werden länger, ein Tiefpass macht zu. Aus dem Punkt in der Mitte
+wird in gut zwei Sekunden eine breite Wolke, die verschwindet. Der Knopf
+leuchtet nach, solange sie steht; danach kommt die Musik zurück.
 
 Oben rechts sitzen zwei Schalter: **EN/DE** stellt die Sprache um, **?**
 schaltet die Hilfetexte ein und aus, die beim Verweilen über einem

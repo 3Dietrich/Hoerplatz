@@ -201,8 +201,12 @@ void RoomComponent::paint (juce::Graphics& g)
                     juce::Justification::centred);
     }
 
-    // Boxen, jeweils auf den Hoerplatz ausgerichtet.
-    const float spkSize = juce::jlimit (13.0f, 40.0f, 0.30f * v.scale);
+    // Boxen und Kopf stehen im Massstab des Raumes: eine Box ist 30 cm
+    // breit, ein Kopf 17,5 cm im Durchmesser. Nach unten sind sie begrenzt,
+    // damit sie in einem grossen Raum sichtbar und greifbar bleiben; nach
+    // oben nicht, sonst waeren die Groessenverhaeltnisse im kleinen Raum
+    // falsch.
+    const float spkSize = std::max (10.0f, 0.30f * v.scale);
     const auto activeHandle = (grabbed != Handle::none ? grabbed : hovered);
     drawSpeaker (g, lPos, std::atan2 (- (hPos.x - lPos.x), hPos.y - lPos.y), spkSize,
                  activeHandle == Handle::leftSpeaker);
@@ -210,7 +214,7 @@ void RoomComponent::paint (juce::Graphics& g)
                  activeHandle == Handle::rightSpeaker);
 
     // Hoerplatz: Fadenkreuz plus Kopf von oben in der besten Mittenstellung.
-    const float headR = juce::jlimit (11.0f, 26.0f, 0.20f * v.scale);
+    const float headR = std::max (6.0f, 0.0875f * v.scale);
     {
         const bool active = (activeHandle == Handle::listener);
         g.setColour (Theme::cyan.withAlpha (active ? 0.85f : 0.55f));

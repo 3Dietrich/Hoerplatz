@@ -261,8 +261,8 @@ int main()
         runFor (1.2, peak, corr);
         CHECK (proc.testTone.isSounding());
         CHECK (peak > 0.005);
-        // Deutlich auseinandergelaufen - das ist die Fahne.
-        CHECK (corr < 0.9);
+        // Auseinandergelaufen bis zur Unabhaengigkeit - das ist die Fahne.
+        CHECK (corr < 0.3);
         std::printf ("Ausklang: Spitze %.3f, Gleichlauf %.4f\n", peak, corr);
 
         // Und danach ist Ruhe.
@@ -270,6 +270,35 @@ int main()
         CHECK (! proc.testTone.isSounding());
         runFor (0.5, peak, corr);
         CHECK (peak < 1.0e-6);
+    }
+
+    // Bypass Pegel: der Schalter muss am Signal etwas aendern. Nebenbei
+    // zeigt die Ausgabe, wie klein der Unterschied bei kleinem Ausgleich
+    // ist - dass man ihn dort kaum hoert, liegt nicht am Schalter.
+    {
+        const auto messen = [&] (float amount, bool bypass)
+        {
+            HoerplatzProcessor proc;
+            setParam (proc, Params::listenerX, -2.1f);
+            setParam (proc, Params::listenerY,  1.6f);
+            setParam (proc, Params::gainAmount, amount);
+            setParam (proc, Params::bypassDelay, 1.0f);
+            setParam (proc, Params::bypassGain, bypass ? 1.0f : 0.0f);
+
+            const auto buffer = impulseResponse (proc, sr, 1024);
+            return 20.0 * std::log10 (sumOf (buffer, 0) / sumOf (buffer, 1));
+        };
+
+        const double voll = messen (100.0f, false);
+        const double leise = messen (30.0f, false);
+        const double aus = messen (100.0f, true);
+
+        CHECK (std::abs (aus) < 0.05);          // mit Bypass stehen beide gleich
+        CHECK (std::abs (voll) > 5.0);          // ohne Bypass deutlich getrennt
+        CHECK (std::abs (leise) < std::abs (voll));
+
+        std::printf ("Bypass Pegel: bei 100 %% %.1f dB Unterschied, bei 30 %% %.1f dB, mit Bypass %.2f dB\n",
+                     voll, leise, aus);
     }
 
     // Zahleneingabe: Komma wie Punkt, Einheit egal.

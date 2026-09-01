@@ -5,15 +5,17 @@
 
 namespace
 {
-    constexpr double pulsePeriod = 0.55;   // Abstand der Impulse
-    constexpr double pulseAttack = 0.020;  // Anstieg
-    constexpr double pulseDecay  = 0.090;  // Abfall, danach Ruhe
-    constexpr float  pulseLevel  = 0.09f;  // rund -21 dBFS in der Spitze
+    constexpr double pulsePeriod = 0.50;    // Abstand der Impulse
+    constexpr double pulseAttack = 0.00015; // Anstieg: praktisch senkrecht
+    constexpr double pulseDecay  = 0.008;   // Abfall im Betrieb - ein kurzes Tack
+    constexpr float  pulseLevel  = 0.13f;
 
-    constexpr double tailOpen = 0.8;       // Zeit, in der sich das Bild oeffnet
-    constexpr double tailMax  = 3.2;       // laenger als der laengste Ton
+    constexpr double widenTime = 0.70;      // Zeit, in der sich das Bild oeffnet
+    constexpr double fadeTau   = 0.85;      // Abklingen beim Verduennen
+    constexpr double fadeMax   = 3.20;      // danach ist Ruhe
 
-    // Schritt in Richtung Ziel, ohne darueber hinauszuschiessen.
+    constexpr double tailDecay = 0.35;      // Abfall am Ende des Verduennens
+
     float towards (float distance, float maxStep)
     {
         return std::max (-maxStep, std::min (maxStep, distance));
@@ -24,37 +26,57 @@ namespace
         state += coeff * (in - state);
         return state;
     }
+
+    float coeffFor (double hz, double sr)
+    {
+        return (float) (1.0 - std::exp (-2.0 * M_PI * hz / sr));
+    }
+}
+
+void TestTone::Noise::prepare (float highpass, float lowpass, unsigned int seed)
+{
+    highCoeff = highpass;
+    lowCoeff = lowpass;
+    state = seed;
+    reset();
+}
+
+void TestTone::Noise::reset()
+{
+    b0 = b1 = b2 = 0.0f;
+    highState = lowState = 0.0f;
+}
+
+float TestTone::Noise::next()
+{
+    state = state * 1664525u + 1013904223u;
+    const float white = (float) ((int) (state >> 8) - 8388608) / 8388608.0f;
+
+    // Rosa Faerbung nach Paul Kellett.
+    b0 = 0.99765f * b0 + white * 0.0990460f;
+    b1 = 0.96300f * b1 + white * 0.2965164f;
+    b2 = 0.57000f * b2 + white * 1.0526913f;
+    const float pink = (b0 + b1 + b2 + white * 0.1848f) * 0.18f;
+
+    // Hochpass als Differenz zum Tiefpassanteil, danach der Tiefpass. Was
+    // ganz unten und ganz oben liegt, hilft beim Orten nicht und macht das
+    // Geraeusch nur anstrengender.
+    const float lows = onePole (pink, highState, highCoeff);
+    return onePole (pink - lows, lowState, lowCoeff);
 }
 
 void TestTone::prepare (double sampleRate)
 {
     sr = sampleRate;
 
-    // Grenzfrequenzen als einfache Einpol-Koeffizienten.
-    const auto coeff = [this] (double hz)
-    {
-        return (float) (1.0 - std::exp (-2.0 * M_PI * hz / sr));
-    };
-    highpassCoeff = coeff (150.0);
-    lowpassCoeff  = coeff (7000.0);
+    const float hp = coeffFor (120.0, sr);
+    const float lp = coeffFor (12000.0, sr);
 
-    // Ein A-Dur-Akkord ueber drei Oktaven. Tiefe Toene klingen laenger als
-    // hohe und stehen naeher an der Mitte - so faechert der Ausklang von
-    // unten nach oben auf, statt gleichmaessig auseinanderzulaufen.
-    const double freqs[]  = { 110.00, 164.81, 220.00, 277.18, 329.63, 440.00 };
-    const double taus[]   = {   3.00,   2.60,   2.30,   2.00,   1.80,   1.55 };
-    const double pans[]   = {   0.00,  -0.55,   0.50,  -0.88,   0.80,  -0.40 };
-
-    for (size_t i = 0; i < partials.size(); ++i)
-    {
-        partials[i].freq   = freqs[i];
-        // Beide Seiten laufen leicht gegeneinander - daraus entsteht die
-        // Breite. Der Versatz steigt mit der Lage, unten bleibt es ruhig.
-        partials[i].detune = 0.60 + 0.15 * (double) i;
-        partials[i].amp    = 0.30 / (1.0 + 0.5 * (double) i);
-        partials[i].tau    = taus[i] / 6.9;              // aus der Zeit bis -60 dB
-        partials[i].pan    = pans[i];
-    }
+    // Drei unabhaengige Quellen: eine gemeinsame fuer die Mitte und je eine
+    // pro Seite. Ihre Mischung bestimmt, wie breit das Geraeusch steht.
+    common.prepare (hp, lp, 0x13579bdfu);
+    leftOnly.prepare (hp, lp, 0x2468ace0u);
+    rightOnly.prepare (hp, lp, 0x0f1e2d3cu);
 
     reset();
 }
@@ -62,20 +84,15 @@ void TestTone::prepare (double sampleRate)
 void TestTone::reset()
 {
     sounding = false;
-    decaying = false;
+    fading = false;
     mix = 0.0f;
     pulsePhase = 0.0;
-    decayTime = 0.0;
-    noiseFade = 0.0f;
-    b0 = b1 = b2 = 0.0f;
-    highpassState = lowpassState = 0.0f;
+    fadeTime = 0.0;
     tailLpL = tailLpR = 0.0f;
 
-    for (auto& p : partials)
-    {
-        p.phaseL = 0.0;
-        p.phaseR = 0.0;
-    }
+    common.reset();
+    leftOnly.reset();
+    rightOnly.reset();
 }
 
 void TestTone::setActive (bool shouldBeActive)
@@ -83,57 +100,23 @@ void TestTone::setActive (bool shouldBeActive)
     active.store (shouldBeActive);
 }
 
-void TestTone::startDecay()
-{
-    decaying = true;
-    decayTime = 0.0;
-
-    // Die Toene setzen mit zufaelliger Phase ein, damit sich ihre
-    // Nulldurchgaenge nicht zu einem Knack addieren.
-    for (auto& p : partials)
-    {
-        randomState = randomState * 1664525u + 1013904223u;
-        p.phaseL = (double) (randomState >> 8) / 16777216.0 * 2.0 * M_PI;
-        p.phaseR = p.phaseL;
-    }
-}
-
-float TestTone::pinkNoise()
-{
-    randomState = randomState * 1664525u + 1013904223u;
-    const float white = (float) ((int) (randomState >> 8) - 8388608) / 8388608.0f;
-
-    b0 = 0.99765f * b0 + white * 0.0990460f;
-    b1 = 0.96300f * b1 + white * 0.2965164f;
-    b2 = 0.57000f * b2 + white * 1.0526913f;
-    const float pink = (b0 + b1 + b2 + white * 0.1848f) * 0.18f;
-
-    // Hochpass als Differenz zum Tiefpassanteil, danach der Tiefpass.
-    const float lows = onePole (pink, highpassState, highpassCoeff);
-    return onePole (pink - lows, lowpassState, lowpassCoeff);
-}
-
 void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
 {
     const bool wantsActive = active.load();
 
-    if (wantsActive && ! sounding)
+    if (wantsActive && (! sounding || fading))
     {
-        // Frischer Start: Impulse von vorne.
+        // Frischer Start, oder wieder eingeschaltet, waehrend es noch
+        // ausklang: die Impulse setzen sofort wieder ein.
         sounding = true;
-        decaying = false;
-        pulsePhase = pulsePeriod;   // gleich der erste Impuls
-        noiseFade = 0.0f;
-    }
-    else if (wantsActive && decaying)
-    {
-        // Wieder eingeschaltet, waehrend es noch ausklang.
-        decaying = false;
+        fading = false;
         pulsePhase = pulsePeriod;
+        fadeTime = 0.0;
     }
-    else if (! wantsActive && sounding && ! decaying)
+    else if (! wantsActive && sounding && ! fading)
     {
-        startDecay();
+        fading = true;
+        fadeTime = 0.0;
     }
 
     // Ist alles verklungen und der Anteil bei null, gibt es nichts zu tun.
@@ -147,82 +130,74 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
     }
 
     const double dt = 1.0 / sr;
-    const float noiseTarget = (! decaying) ? 1.0f : 0.0f;
-    const float fadeStep = (float) (dt / 0.08);   // 80 ms fuer den Wechsel
 
     for (int i = 0; i < numSamples; ++i)
     {
         float sampleL = 0.0f;
         float sampleR = 0.0f;
 
-        noiseFade += towards (noiseTarget - noiseFade, fadeStep);
-
-        // Impulse, solange nicht ausgeklungen wird.
-        if (noiseFade > 0.0001f)
+        if (sounding)
         {
-            pulsePhase += dt;
-            if (pulsePhase >= pulsePeriod)
-                pulsePhase -= pulsePeriod;
+            // Beim Verduennen wandert alles gleichzeitig: das Bild geht auf,
+            // die Impulse werden laenger, der Klang dunkler, das Ganze leiser.
+            double width = 0.0;
+            double decay = pulseDecay;
+            double level = 1.0;
+            double cutoff = 12000.0;
 
-            float env = 0.0f;
-            if (pulsePhase < pulseAttack)
-                env = 0.5f - 0.5f * (float) std::cos (M_PI * pulsePhase / pulseAttack);
-            else
-                env = (float) std::exp (-(pulsePhase - pulseAttack) / pulseDecay);
-
-            const float n = pinkNoise() * env * pulseLevel * noiseFade;
-            sampleL += n;
-            sampleR += n;
-        }
-
-        // Ausklang: die Toene wandern beim Verklingen nach aussen.
-        if (decaying)
-        {
-            decayTime += dt;
-
-            // Oeffnung von der Mitte nach aussen, weich anlaufend.
-            const double spread = decayTime >= tailOpen
-                                ? 1.0
-                                : 0.5 - 0.5 * std::cos (M_PI * decayTime / tailOpen);
-
-            float tailL = 0.0f;
-            float tailR = 0.0f;
-
-            for (auto& p : partials)
+            if (fading)
             {
-                const double env = std::exp (-decayTime / p.tau);
-                if (env < 1.0e-5)
-                    continue;
+                fadeTime += dt;
+                const double t = std::min (1.0, fadeTime / widenTime);
+                width  = 0.5 - 0.5 * std::cos (M_PI * t);           // weich von 0 auf 1
+                decay  = pulseDecay + (tailDecay - pulseDecay) * t;
+                level  = std::exp (-fadeTime / fadeTau);
+                cutoff = 900.0 + 11100.0 * std::exp (-fadeTime * 1.1);
 
-                p.phaseL += 2.0 * M_PI * p.freq / sr;
-                p.phaseR += 2.0 * M_PI * (p.freq + p.detune) / sr;
-                if (p.phaseL > 2.0 * M_PI) p.phaseL -= 2.0 * M_PI;
-                if (p.phaseR > 2.0 * M_PI) p.phaseR -= 2.0 * M_PI;
-
-                // Gleiche Leistung ueber das Panorama, damit die Lautstaerke
-                // beim Wandern nicht schwankt.
-                const double pan = p.pan * spread;
-                const double angle = (pan + 1.0) * M_PI * 0.25;
-                const double gainL = std::cos (angle);
-                const double gainR = std::sin (angle);
-
-                const double amp = p.amp * env;
-                tailL += (float) (std::sin (p.phaseL) * amp * gainL);
-                tailR += (float) (std::sin (p.phaseR) * amp * gainR);
+                if (fadeTime > fadeMax)
+                {
+                    sounding = false;
+                    fading = false;
+                }
             }
 
-            // Der Tiefpass macht beim Verklingen langsam zu.
-            const double cutoff = 6000.0 * std::exp (-decayTime * 0.55) + 700.0;
-            const float c = (float) (1.0 - std::exp (-2.0 * M_PI * cutoff / sr));
-            // Der Ausklang bleibt auf der Lautstaerke der Impulse - er soll
-            // das Ohr entlassen, nicht erschrecken.
-            sampleL += onePole (tailL, tailLpL, c) * 0.14f;
-            sampleR += onePole (tailR, tailLpR, c) * 0.14f;
+            // Beim Verduennen ruecken die Impulse zusammen und laufen mit
+            // ihrem laengeren Abfall ineinander - aus einzelnen Schlaegen
+            // wird eine Wolke.
+            const double period = fading ? pulsePeriod - (pulsePeriod - 0.20)
+                                           * std::min (1.0, fadeTime / widenTime)
+                                         : pulsePeriod;
+            pulsePhase += dt;
+            if (pulsePhase >= period)
+                pulsePhase -= period;
 
-            if (decayTime > tailMax)
+            // Senkrechte Flanke, dann exponentiell zurueck. Die Flanke ist
+            // das eigentliche Werkzeug: an ihr haengt, ob man einen
+            // Laufzeitunterschied ueberhaupt hoeren kann.
+            const float env = pulsePhase < pulseAttack
+                            ? (float) (pulsePhase / pulseAttack)
+                            : (float) std::exp (-(pulsePhase - pulseAttack) / decay);
+
+            // Von der Mitte in die Breite: der gemeinsame Anteil weicht
+            // zwei eigenen. Ueber Sinus und Kosinus gemischt, damit die
+            // Lautstaerke dabei gleich bleibt.
+            const double angle = width * M_PI * 0.5;
+            const float centre = (float) std::cos (angle);
+            const float sides  = (float) std::sin (angle);
+
+            const float shared = common.next();
+            const float ownL = leftOnly.next();
+            const float ownR = rightOnly.next();
+
+            const float gain = env * pulseLevel * (float) level;
+            sampleL = (shared * centre + ownL * sides) * gain;
+            sampleR = (shared * centre + ownR * sides) * gain;
+
+            if (fading)
             {
-                sounding = false;
-                decaying = false;
+                const float c = coeffFor (cutoff, sr);
+                sampleL = onePole (sampleL, tailLpL, c);
+                sampleR = onePole (sampleR, tailLpR, c);
             }
         }
 
@@ -230,8 +205,7 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
         right[i] = sampleR;
 
         // Solange etwas klingt, gehoert der Ausgang dem Testgeraeusch. Am
-        // Ende laeuft der Anteil in einem Zehntel einer Sekunde zurueck, so
-        // kommt die Musik ohne Ruck wieder.
+        // Ende laeuft der Anteil in einem Zehntel einer Sekunde zurueck.
         const float mixTarget = sounding ? 1.0f : 0.0f;
         mix += towards (mixTarget - mix, (float) (dt / 0.10));
         mixOut[i] = mix;
