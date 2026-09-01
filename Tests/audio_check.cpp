@@ -22,6 +22,17 @@ namespace
 
     struct Peak { int index = -1; float value = 0.0f; };
 
+    // Die Interpolation der Delayline verteilt einen Impuls auf mehrere
+    // Samples; ihre Koeffizienten summieren sich zu eins. Der Pegel steckt
+    // deshalb in der Summe, nicht in der hoechsten Einzelspitze.
+    float sumOf (const juce::AudioBuffer<float>& b, int channel)
+    {
+        float sum = 0.0f;
+        for (int i = 0; i < b.getNumSamples(); ++i)
+            sum += b.getSample (channel, i);
+        return sum;
+    }
+
     Peak findPeak (const juce::AudioBuffer<float>& b, int channel)
     {
         Peak p;
@@ -72,11 +83,12 @@ int main()
     // Hoerplatz links vorne: die linke Box ist deutlich naeher.
     {
         HoerplatzProcessor proc;
-        setParam (proc, Params::speakerDistance, 5.5f);
+        setParam (proc, Params::leftX, -2.75f);
+        setParam (proc, Params::rightX, 2.75f);
         setParam (proc, Params::listenerX, -2.1f);
         setParam (proc, Params::listenerY,  1.6f);
 
-        const auto a = Geometry::compute (5.5, -2.1, 1.6);
+        const auto a = Geometry::compute ({ -2.75, 0.35 }, { 2.75, 0.35 }, { -2.1, 1.6 });
         const auto buffer = impulseResponse (proc, sr, 2048);
 
         const auto l = findPeak (buffer, 0);
@@ -88,18 +100,21 @@ int main()
         CHECK (std::abs ((l.index - r.index) - expectedShift) <= 1);
 
         // Pegel: der naehere Kanal ist im Verhaeltnis der Abstaende leiser.
-        CHECK (std::abs (r.value - 1.0f) < 0.02f);
-        CHECK (std::abs (l.value - (float) a.gainL) < 0.02f);
+        const float sumL = sumOf (buffer, 0);
+        const float sumR = sumOf (buffer, 1);
+        CHECK (std::abs (sumR - 1.0f) < 0.02f);
+        CHECK (std::abs (sumL - (float) a.gainL) < 0.02f);
 
-        std::printf ("links: Index %d, Wert %.3f (erwartet %.3f)\n", l.index, l.value, a.gainL);
-        std::printf ("rechts: Index %d, Wert %.3f\n", r.index, r.value);
+        std::printf ("links: Index %d, Pegel %.3f (erwartet %.3f)\n", l.index, sumL, a.gainL);
+        std::printf ("rechts: Index %d, Pegel %.3f\n", r.index, sumR);
     }
 
     // Beide Umgehungen an: das Signal geht unveraendert durch, beide
     // Kanaele liegen wieder aufeinander und stehen auf vollem Pegel.
     {
         HoerplatzProcessor proc;
-        setParam (proc, Params::speakerDistance, 5.5f);
+        setParam (proc, Params::leftX, -2.75f);
+        setParam (proc, Params::rightX, 2.75f);
         setParam (proc, Params::listenerX, -2.1f);
         setParam (proc, Params::listenerY,  1.6f);
         setParam (proc, Params::bypassDelay, 1.0f);
@@ -110,26 +125,28 @@ int main()
         const auto r = findPeak (buffer, 1);
 
         CHECK (l.index == r.index);
-        CHECK (std::abs (l.value - 1.0f) < 0.02f && std::abs (r.value - 1.0f) < 0.02f);
+        CHECK (std::abs (sumOf (buffer, 0) - 1.0f) < 0.02f);
+        CHECK (std::abs (sumOf (buffer, 1) - 1.0f) < 0.02f);
     }
 
     // Nur die Laufzeit umgangen: die Pegel stehen weiter im Verhaeltnis der
     // Abstaende, die Impulse liegen aber wieder gleichauf.
     {
         HoerplatzProcessor proc;
-        setParam (proc, Params::speakerDistance, 5.5f);
+        setParam (proc, Params::leftX, -2.75f);
+        setParam (proc, Params::rightX, 2.75f);
         setParam (proc, Params::listenerX, 1.8f);
         setParam (proc, Params::listenerY, 2.0f);
         setParam (proc, Params::bypassDelay, 1.0f);
 
-        const auto a = Geometry::compute (5.5, 1.8, 2.0);
+        const auto a = Geometry::compute ({ -2.75, 0.35 }, { 2.75, 0.35 }, { 1.8, 2.0 });
         const auto buffer = impulseResponse (proc, sr, 1024);
         const auto l = findPeak (buffer, 0);
         const auto r = findPeak (buffer, 1);
 
         CHECK (l.index == r.index);
-        CHECK (std::abs (l.value - 1.0f) < 0.02f);
-        CHECK (std::abs (r.value - (float) a.gainR) < 0.02f);
+        CHECK (std::abs (sumOf (buffer, 0) - 1.0f) < 0.02f);
+        CHECK (std::abs (sumOf (buffer, 1) - (float) a.gainR) < 0.02f);
     }
 
     if (failures == 0)

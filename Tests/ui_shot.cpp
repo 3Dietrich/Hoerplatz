@@ -4,7 +4,8 @@
 //
 // Aufruf:  ui_shot <ausgabe.png> [name=wert ...]
 // Namen:   w, h (Fenstergroesse), scale (Vielfaches fuer scharfe Bilder),
-//          spk (Boxenabstand), rw, rd (Raumbreite/-tiefe), x, y (Hoerplatz)
+//          lx, ly / rx, ry (Standorte der Boxen), rw, rd (Raumbreite/-tiefe),
+//          x, y (Hoerplatz), en=1 (englische Beschriftung)
 #include "../Source/PluginProcessor.h"
 #include "../Source/PluginEditor.h"
 
@@ -48,16 +49,23 @@ int main (int argc, char** argv)
         if (auto* p = processor.apvts.getParameter (id))
             p->setValueNotifyingHost (p->convertTo0to1 ((float) it->second));
     };
-    set (Params::speakerDistance, "spk");
+    set (Params::leftX,  "lx");
+    set (Params::leftY,  "ly");
+    set (Params::rightX, "rx");
+    set (Params::rightY, "ry");
     set (Params::roomWidth,  "rw");
     set (Params::roomDepth,  "rd");
     set (Params::listenerX,  "x");
     set (Params::listenerY,  "y");
 
+    if (value ("en", 0.0) > 0.5)
+        processor.apvts.state.setProperty (Params::language, 1, nullptr);
+
     std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
     editor->setSize (w, h);
 
-    juce::Image image (juce::Image::ARGB, juce::roundToInt (w * scale), juce::roundToInt (h * scale), true);
+    juce::Image image (juce::Image::ARGB, juce::roundToInt ((float) w * scale),
+                       juce::roundToInt ((float) h * scale), true);
     {
         juce::Graphics g (image);
         g.addTransform (juce::AffineTransform::scale (scale));

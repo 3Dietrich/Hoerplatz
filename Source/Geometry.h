@@ -3,22 +3,24 @@
 #include <algorithm>
 #include <cmath>
 
-// Reine Rechnung, kein JUCE, kein Zustand: aus der Aufstellung (Boxenabstand)
-// und dem Hoerplatz folgen die beiden Laufzeiten und die beiden Pegel, mit
-// denen die Boxen am Hoerplatz wieder gleichzeitig und gleich laut ankommen.
+// Reine Rechnung, kein JUCE, kein Zustand: aus den Standorten der beiden
+// Boxen und dem Hoerplatz folgen die beiden Laufzeiten und die beiden Pegel,
+// mit denen die Boxen am Hoerplatz wieder gleichzeitig und gleich laut
+// ankommen.
 //
 // Weltkoordinaten (Draufsicht, Meter):
-//   Ursprung = Mitte zwischen den beiden Boxen
-//   +x = nach rechts,  +y = in den Raum hinein (von der Boxenebene weg)
-//   Boxen liegen auf y = 0, der Hoerer bei y > 0.
+//   Ursprung = Mitte der vorderen Wand
+//   +x = nach rechts,  +y = in den Raum hinein
 //
 // Die Waende bleiben aussen vor - gerechnet wird nur der Direktschall
 // ("Waende rausgekuerzt"). Der Raum dient der Darstellung und begrenzt,
-// wohin sich der Hoerplatz schieben laesst.
+// wohin sich Boxen und Hoerplatz schieben lassen.
 namespace Geometry
 {
     // Schallgeschwindigkeit in Luft bei rund 20 Grad.
     inline constexpr double speedOfSound = 343.0;
+
+    struct Point { double x = 0.0, y = 0.0; };
 
     struct Alignment
     {
@@ -30,23 +32,30 @@ namespace Geometry
         double gainR = 1.0;     // Ausgleichs-Pegel rechts (linear), <= 1
         double baseAngleDeg = 0.0;  // Oeffnungswinkel Box-Hoerer-Box (Grad), Ideal 60
         double headAngleDeg = 0.0;  // Blickrichtung gegen "geradeaus", + = nach rechts gedreht
+
+        // Welche Seite korrigiert wird - die naehere. Bei gleichen Wegen
+        // steht der Hoerplatz mittig und es gibt nichts zu tun.
+        bool leftIsNearer() const { return distL < distR; }
+        bool centred (double tolerance = 0.005) const { return std::fabs (distL - distR) < tolerance; }
+
+        // Betrag der Korrektur, unabhaengig von der Seite.
+        double delaySeconds() const { return std::max (delayL, delayR); }
+        double gainRatio() const { return std::min (gainL, gainR); }
     };
 
-    // speakerDistance = Abstand der beiden Boxen (m), listenerX/Y = Hoerplatz.
-    inline Alignment compute (double speakerDistance, double listenerX, double listenerY)
+    inline Alignment compute (Point left, Point right, Point listener)
     {
         Alignment a;
 
-        const double half = 0.5 * std::max (0.01, speakerDistance);
+        const double lx = left.x  - listener.x;
+        const double ly = left.y  - listener.y;
+        const double rx = right.x - listener.x;
+        const double ry = right.y - listener.y;
 
-        // Vom Hoerplatz zur jeweiligen Box. Der Mindestabstand haelt die
-        // Rechnung heil, wenn jemand den Hoerplatz genau in eine Box schiebt.
-        const double lx = -half - listenerX;
-        const double rx =  half - listenerX;
-        const double dy = -listenerY;
-
-        a.distL = std::max (0.05, std::sqrt (lx * lx + dy * dy));
-        a.distR = std::max (0.05, std::sqrt (rx * rx + dy * dy));
+        // Der Mindestabstand haelt die Rechnung heil, wenn jemand den
+        // Hoerplatz genau in eine Box schiebt.
+        a.distL = std::max (0.05, std::sqrt (lx * lx + ly * ly));
+        a.distR = std::max (0.05, std::sqrt (rx * rx + ry * ry));
 
         // Laufzeit: die naehere Box wird so lange aufgehalten, bis die
         // weiter entfernte eingeholt hat. Verzoegert wird also immer nur,
@@ -63,8 +72,8 @@ namespace Geometry
         a.gainR = a.distR / far;
 
         // Richtungen zu den Boxen, normiert.
-        const double nlx = lx / a.distL, nly = dy / a.distL;
-        const double nrx = rx / a.distR, nry = dy / a.distR;
+        const double nlx = lx / a.distL, nly = ly / a.distL;
+        const double nrx = rx / a.distR, nry = ry / a.distR;
 
         // Oeffnungswinkel zwischen beiden Richtungen (Stereobasis, wie sie
         // der Hoerer an diesem Platz sieht).
@@ -73,7 +82,8 @@ namespace Geometry
 
         // Beste Mittenstellung = Winkelhalbierende der beiden Richtungen.
         // Sie ist die Blickrichtung, in der die Phantommitte genau vorne
-        // sitzt. Bezug ist "geradeaus", also die Richtung -y (zur Boxenebene).
+        // sitzt. Bezug ist "geradeaus", also die Richtung -y (zur vorderen
+        // Wand hin).
         const double bx = nlx + nrx;
         const double by = nly + nry;
         a.headAngleDeg = (bx == 0.0 && by == 0.0)
@@ -81,5 +91,13 @@ namespace Geometry
                        : std::atan2 (bx, -by) * 180.0 / M_PI;
 
         return a;
+    }
+
+    // Abstand der beiden Boxen voneinander.
+    inline double speakerDistance (Point left, Point right)
+    {
+        const double dx = right.x - left.x;
+        const double dy = right.y - left.y;
+        return std::sqrt (dx * dx + dy * dy);
     }
 }

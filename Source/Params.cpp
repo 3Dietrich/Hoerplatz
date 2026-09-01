@@ -25,24 +25,28 @@ juce::AudioProcessorValueTreeState::ParameterLayout Params::createLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    layout.add (makeFloat (speakerDistance, "Boxenabstand", 0.30f, 12.0f, 5.50f));
-    layout.add (makeFloat (roomWidth,       "Raumbreite",   1.00f, 20.0f, 6.50f));
-    layout.add (makeFloat (roomDepth,       "Raumtiefe",    1.00f, 20.0f, 6.50f));
+    // Standardaufstellung: 5,50 m auseinander, 35 cm vor der vorderen Wand.
+    layout.add (makeFloat (leftX,  "Box links seitlich",  -12.0f, 12.0f, -2.75f));
+    layout.add (makeFloat (leftY,  "Box links Abstand",    -1.0f, 20.0f,  0.35f));
+    layout.add (makeFloat (rightX, "Box rechts seitlich", -12.0f, 12.0f,  2.75f));
+    layout.add (makeFloat (rightY, "Box rechts Abstand",   -1.0f, 20.0f,  0.35f));
 
-    // Hoerplatz in Metern, Ursprung = Mitte zwischen den Boxen, +y in den
-    // Raum hinein. Als Parameter gefuehrt, damit er sich automatisieren und
-    // im Projekt speichern laesst - das Ziehen im Grundriss schreibt
-    // denselben Wert.
-    layout.add (makeFloat (listenerX, "Hoerplatz seitlich", -10.0f, 10.0f, 0.00f));
+    layout.add (makeFloat (roomWidth, "Raumbreite", 1.00f, 20.0f, 6.50f));
+    layout.add (makeFloat (roomDepth, "Raumtiefe",  1.00f, 20.0f, 6.50f));
 
-    // Startwert: das gleichseitige Dreieck zum voreingestellten
-    // Boxenabstand - die uebliche Ausgangslage fuer Stereo.
-    layout.add (makeFloat (listenerY, "Hoerplatz Abstand",    0.10f, 20.0f, 4.76f));
+    // Hoerplatz in Metern, Ursprung = Mitte der vorderen Wand. Als Parameter
+    // gefuehrt, damit er sich automatisieren und im Projekt speichern
+    // laesst - das Ziehen im Grundriss schreibt denselben Wert.
+    layout.add (makeFloat (listenerX, "Hoerplatz seitlich", -12.0f, 12.0f, 0.00f));
+
+    // Startwert: das gleichseitige Dreieck zur Standardaufstellung - die
+    // uebliche Ausgangslage fuer Stereo.
+    layout.add (makeFloat (listenerY, "Hoerplatz Abstand",   -1.0f, 20.0f, 5.11f));
 
     layout.add (std::make_unique<juce::AudioParameterBool> (
-        juce::ParameterID { bypassDelay, 1 }, "Laufzeit umgehen", false));
+        juce::ParameterID { bypassDelay, 1 }, "Bypass Laufzeit", false));
     layout.add (std::make_unique<juce::AudioParameterBool> (
-        juce::ParameterID { bypassGain, 1 }, "Pegel umgehen", false));
+        juce::ParameterID { bypassGain, 1 }, "Bypass Pegel", false));
 
     return layout;
 }

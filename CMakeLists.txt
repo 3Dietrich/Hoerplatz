@@ -32,6 +32,8 @@ target_sources(Hoerplatz
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
         Source/Params.cpp
+    Source/Strings.cpp
+        Source/Strings.cpp
         Source/UI/RoomComponent.cpp
         Source/UI/HeadSymbol.cpp)
 
@@ -68,6 +70,7 @@ target_sources(ui_shot PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/Params.cpp
+    Source/Strings.cpp
     Source/UI/RoomComponent.cpp
     Source/UI/HeadSymbol.cpp)
 target_compile_features(ui_shot PRIVATE cxx_std_17)
@@ -94,6 +97,7 @@ target_sources(audio_check PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/Params.cpp
+    Source/Strings.cpp
     Source/UI/RoomComponent.cpp
     Source/UI/HeadSymbol.cpp)
 target_compile_features(audio_check PRIVATE cxx_std_17)

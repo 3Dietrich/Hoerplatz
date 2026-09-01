@@ -19,30 +19,35 @@ namespace
     }
 
     bool near (double a, double b, double tol = 1e-9) { return std::fabs (a - b) <= tol; }
+
+    // Aufstellung der Vorgabe: 5,50 m auseinander, 35 cm vor der Wand.
+    constexpr Geometry::Point boxL { -2.75, 0.35 };
+    constexpr Geometry::Point boxR {  2.75, 0.35 };
 }
 
 #define CHECK(cond) check ((cond), #cond, __LINE__)
 
 int main()
 {
-    constexpr double spk = 5.5;
-
     // Mittig vor den Boxen: nichts zu tun.
     {
-        const auto a = Geometry::compute (spk, 0.0, 3.0);
+        const auto a = Geometry::compute (boxL, boxR, { 0.0, 3.35 });
         CHECK (near (a.distL, a.distR, 1e-12));
         CHECK (near (a.delayL, 0.0) && near (a.delayR, 0.0));
         CHECK (near (a.gainL, 1.0) && near (a.gainR, 1.0));
         CHECK (near (a.headAngleDeg, 0.0, 1e-9));
+        CHECK (a.centred());
     }
 
     // Nach links gerueckt: die linke Box ist naeher, wird also verzoegert
     // und abgesenkt; die weiter entfernte bleibt unangetastet.
     {
-        const auto a = Geometry::compute (spk, -1.2, 3.0);
+        const auto a = Geometry::compute (boxL, boxR, { -1.2, 3.35 });
         CHECK (a.distL < a.distR);
+        CHECK (a.leftIsNearer() && ! a.centred());
         CHECK (a.delayL > 0.0 && near (a.delayR, 0.0));
         CHECK (a.gainL < 1.0 && near (a.gainR, 1.0));
+        CHECK (near (a.delaySeconds(), a.delayL) && near (a.gainRatio(), a.gainL));
         // Die Mitte liegt von dort aus rechts, der Kopf dreht dorthin.
         CHECK (a.headAngleDeg > 0.0);
         // Pegel folgt 1/r: das Verhaeltnis der Pegel ist das der Abstaende.
@@ -54,27 +59,51 @@ int main()
 
     // Spiegelbildlich rechts: gleiche Betraege, getauschte Seiten.
     {
-        const auto l = Geometry::compute (spk, -2.0, 2.5);
-        const auto r = Geometry::compute (spk,  2.0, 2.5);
+        const auto l = Geometry::compute (boxL, boxR, { -2.0, 2.5 });
+        const auto r = Geometry::compute (boxL, boxR, {  2.0, 2.5 });
         CHECK (near (l.distL, r.distR, 1e-12) && near (l.distR, r.distL, 1e-12));
         CHECK (near (l.delayL, r.delayR, 1e-12));
         CHECK (near (l.headAngleDeg, -r.headAngleDeg, 1e-9));
+        CHECK (l.leftIsNearer() && ! r.leftIsNearer());
     }
 
     // Gleichseitiges Dreieck: Basisbreite 60 Grad.
     {
-        const auto a = Geometry::compute (spk, 0.0, spk * std::sqrt (3.0) / 2.0);
+        const auto a = Geometry::compute (boxL, boxR, { 0.0, 0.35 + 5.5 * std::sqrt (3.0) / 2.0 });
         CHECK (near (a.baseAngleDeg, 60.0, 1e-9));
     }
 
-    // Der Laufzeitunterschied kann den Boxenabstand nie ueberschreiten
+    // Schiefe Aufstellung: eine Box steht weiter im Raum. Auf der
+    // Mittelsenkrechten der Verbindungslinie bleibt es trotzdem symmetrisch.
+    {
+        const Geometry::Point l { -2.0, 0.30 };
+        const Geometry::Point r {  2.4, 1.90 };
+        const Geometry::Point centre { 0.5 * (l.x + r.x), 0.5 * (l.y + r.y) };
+
+        // Senkrechte auf der Verbindung, vom Mittelpunkt aus in den Raum.
+        const double dx = r.x - l.x, dy = r.y - l.y;
+        const double len = std::sqrt (dx * dx + dy * dy);
+        const Geometry::Point seat { centre.x - dy / len * 3.0, centre.y + dx / len * 3.0 };
+
+        const auto a = Geometry::compute (l, r, seat);
+        CHECK (near (a.distL, a.distR, 1e-9));
+        CHECK (a.centred());
+        CHECK (near (a.delayL, 0.0, 1e-12) && near (a.delayR, 0.0, 1e-12));
+        CHECK (near (Geometry::speakerDistance (l, r), len, 1e-12));
+    }
+
+    // Der Laufzeitunterschied kann den Abstand der Boxen nie ueberschreiten
     // (Dreiecksungleichung) - davon haengt die Groesse des Delaypuffers ab.
     {
+        const Geometry::Point l { -6.0, 0.5 };
+        const Geometry::Point r {  6.0, 2.0 };
+        const double maxDelay = Geometry::speakerDistance (l, r) / Geometry::speedOfSound;
+
         for (double x = -12.0; x <= 12.0; x += 0.37)
-            for (double y = 0.1; y <= 20.0; y += 0.53)
+            for (double y = -1.0; y <= 20.0; y += 0.53)
             {
-                const auto a = Geometry::compute (12.0, x, y);
-                CHECK (std::fabs (a.delayL - a.delayR) <= 12.0 / Geometry::speedOfSound + 1e-9);
+                const auto a = Geometry::compute (l, r, { x, y });
+                CHECK (std::fabs (a.delayL - a.delayR) <= maxDelay + 1e-9);
                 CHECK (a.gainL <= 1.0 + 1e-12 && a.gainR <= 1.0 + 1e-12);
                 CHECK (a.delayL >= 0.0 && a.delayR >= 0.0);
             }

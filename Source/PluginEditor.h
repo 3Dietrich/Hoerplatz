@@ -3,19 +3,23 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "PluginProcessor.h"
+#include "Strings.h"
 #include "UI/RoomComponent.h"
 
-// Zahlenfeld rechts unten: Abstaende, Laufzeiten, Pegel, Winkel. Es rechnet
-// aus den Parametern, nicht aus dem Audiothread - so stimmen die Werte auch,
-// wenn gerade nichts spielt.
-class ReadoutPanel : public juce::Component
+// Zahlenfeld rechts unten: welche Seite um wieviel verzoegert und abgesenkt
+// wird. Es rechnet aus den Parametern, nicht aus dem Audiothread - so
+// stimmen die Werte auch, wenn gerade nichts spielt.
+class ReadoutPanel : public juce::Component,
+                     public juce::SettableTooltipClient
 {
 public:
     explicit ReadoutPanel (HoerplatzProcessor& p) : processor (p) {}
+    void setLang (Lang l) { lang = l; }
     void paint (juce::Graphics&) override;
 
 private:
     HoerplatzProcessor& processor;
+    Lang lang = Lang::de;
 };
 
 class HoerplatzEditor : public juce::AudioProcessorEditor,
@@ -30,7 +34,11 @@ public:
 
 private:
     void timerCallback() override;
+    void applyLanguage();
+    void applyHelp();
     void updateArea();
+    void updateSpeakerDistanceSlider();
+    void setSpeakerDistance (float metres);
 
     // Ein Regler mit Beschriftung darueber - kompakt, damit rechts genug
     // Platz fuer alle bleibt.
@@ -41,21 +49,30 @@ private:
         std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attach;
     };
 
-    void setUpRow (Row&, const char* paramId, const juce::String& text);
+    void styleSlider (juce::Slider&);
+    void setUpRow (Row&, const char* paramId, const juce::String& tooltip);
 
     HoerplatzProcessor& plugin;
 
     RoomComponent room;
     ReadoutPanel readout;
 
-    Row speakerDistance, roomWidth, roomDepth, listenerX, listenerY;
+    // Der Boxenabstand hat keinen eigenen Parameter - die beiden Boxen
+    // stehen einzeln im Raum. Der Regler zieht sie um ihre gemeinsame Mitte
+    // auseinander und zeigt an, wie weit sie gerade auseinanderstehen.
+    Row speakerDistance;
+    Row roomWidth, roomDepth, listenerX, listenerY;
 
-    juce::ToggleButton bypassDelay { "Laufzeit umgehen" };
-    juce::ToggleButton bypassGain  { "Pegel umgehen" };
+    juce::ToggleButton bypassDelay, bypassGain;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassDelayAttach, bypassGainAttach;
 
     juce::Label areaLabel;
-    juce::Label hintLabel;
+
+    juce::TextButton langButton, helpButton;
+    std::unique_ptr<juce::TooltipWindow> tooltips;
+
+    Lang lang = Lang::de;
+    bool showHelp = true;
 
     // Feste Zeichenbreite fuer die Zahlen in den Reglerfeldern: beim Ziehen
     // soll dort nur die Ziffer wechseln, nicht ihre Lage. Betroffen sind

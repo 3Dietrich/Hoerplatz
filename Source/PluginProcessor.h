@@ -55,7 +55,10 @@ private:
 
     double sampleRate = 44100.0;
 
-    std::atomic<float>* pSpeakerDistance = nullptr;
+    std::atomic<float>* pLeftX = nullptr;
+    std::atomic<float>* pLeftY = nullptr;
+    std::atomic<float>* pRightX = nullptr;
+    std::atomic<float>* pRightY = nullptr;
     std::atomic<float>* pListenerX = nullptr;
     std::atomic<float>* pListenerY = nullptr;
     std::atomic<float>* pBypassDelay = nullptr;

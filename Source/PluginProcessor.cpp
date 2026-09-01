@@ -7,7 +7,10 @@ HoerplatzProcessor::HoerplatzProcessor()
                         .withOutput ("Ausgang", juce::AudioChannelSet::stereo(), true)),
       apvts (*this, nullptr, "Hoerplatz", Params::createLayout())
 {
-    pSpeakerDistance = apvts.getRawParameterValue (Params::speakerDistance);
+    pLeftX  = apvts.getRawParameterValue (Params::leftX);
+    pLeftY  = apvts.getRawParameterValue (Params::leftY);
+    pRightX = apvts.getRawParameterValue (Params::rightX);
+    pRightY = apvts.getRawParameterValue (Params::rightY);
     pListenerX       = apvts.getRawParameterValue (Params::listenerX);
     pListenerY       = apvts.getRawParameterValue (Params::listenerY);
     pBypassDelay     = apvts.getRawParameterValue (Params::bypassDelay);
@@ -27,8 +30,8 @@ void HoerplatzProcessor::prepareToPlay (double newSampleRate, int samplesPerBloc
 
     // Der Laufzeitunterschied zwischen den Boxen kann nie groesser werden
     // als ihr Abstand geteilt durch die Schallgeschwindigkeit (Dreiecks-
-    // ungleichung). Bei 12 m Boxenabstand sind das 35 ms; 250 ms Puffer
-    // lassen reichlich Luft.
+    // ungleichung). Auch quer durch den groessten einstellbaren Raum sind
+    // das keine 90 ms; 250 ms Puffer lassen reichlich Luft.
     const int maxSamples = (int) (0.25 * sampleRate) + 8;
 
     juce::dsp::ProcessSpec spec { sampleRate, (juce::uint32) samplesPerBlock, 1 };
@@ -57,7 +60,9 @@ void HoerplatzProcessor::prepareToPlay (double newSampleRate, int samplesPerBloc
 
 Geometry::Alignment HoerplatzProcessor::currentAlignment() const
 {
-    return Geometry::compute (pSpeakerDistance->load(), pListenerX->load(), pListenerY->load());
+    return Geometry::compute ({ pLeftX->load(),  pLeftY->load() },
+                              { pRightX->load(), pRightY->load() },
+                              { pListenerX->load(), pListenerY->load() });
 }
 
 void HoerplatzProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)

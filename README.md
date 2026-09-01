@@ -13,31 +13,36 @@ Audio Unit, VST3 und Standalone für macOS. Gebaut mit JUCE.
 
 ## So geht's
 
-Links siehst du deinen Raum von oben: die beiden Boxen an der vorderen Wand,
-dazwischen dein Platz. Klick hin, wo du sitzt, oder zieh den Kopf dorthin.
-Alles andere ergibt sich von selbst.
+Links siehst du deinen Raum von oben. **Beide Boxen und dein Platz lassen
+sich einzeln ziehen** - so baust du deine Aufstellung nach, auch wenn sie
+schief ist, weil ein Schrank im Weg steht. Ein Klick daneben setzt den
+Hörplatz, ohne zielen zu müssen.
 
 Der Kopf dreht sich dabei in die Richtung, in der die Phantommitte für
 diesen Platz genau vor dir liegt - so herum sitzt du am besten. Die beiden
 Linien zeigen die Weglängen, die dickere ist die längere: sie gibt den Takt
-vor, an ihr richtet sich die andere aus.
+vor, an ihr richtet sich die andere aus. Die dünn gestrichelte Linie ist die
+Mittelsenkrechte zwischen den Boxen - überall darauf hörst du symmetrisch.
 
 **Die Regler**
 
 | | |
 |---|---|
-| Boxenabstand | wie weit die Boxen auseinanderstehen, in Metern |
+| Boxenabstand | zieht beide Boxen um ihre gemeinsame Mitte auseinander |
 | Raumbreite, Raumtiefe | dein Raum; die Fläche steht darunter |
-| Hörplatz seitlich, Abstand | dein Platz, gemessen von der Mitte zwischen den Boxen |
-| Laufzeit umgehen | schaltet die Verzögerung ab |
-| Pegel umgehen | schaltet die Lautstärke-Anpassung ab |
+| Hörplatz seitlich, Abstand | dein Platz, gemessen von der Mitte der vorderen Wand |
+| Bypass Laufzeit | lässt die Verzögerung unangetastet |
+| Bypass Pegel | lässt die Lautstärke unangetastet |
 
-Die beiden Schalter sind zum Vergleichen da: einmal mit, einmal ohne. Der
-Unterschied ist deutlicher, als man erwartet.
+Die beiden Bypass-Schalter sind zum Vergleichen da: einmal mit, einmal ohne.
+Der Unterschied ist deutlicher, als man erwartet.
 
-Unten rechts stehen die Zahlen dazu - Weglänge, Verzögerung und Absenkung je
-Kanal, dazu die Basisbreite (60° ist das gleichseitige Dreieck, der übliche
-Bezugspunkt) und der Blickwinkel.
+Unten rechts steht knapp, was gerade passiert: welche Seite korrigiert wird
+und um wieviel - Verzögerung in Millisekunden, Absenkung in Dezibel.
+
+Oben rechts sitzen zwei Schalter: **EN/DE** stellt die Sprache um, **?**
+schaltet die Hilfetexte ein und aus, die beim Verweilen über einem
+Bedienelement erscheinen. Beides wird mit dem Projekt gespeichert.
 
 Ausgelegt ist das Ganze auf Räume von 5 bis 90 m², die Regler reichen weiter,
 falls du mehr brauchst.
@@ -47,7 +52,8 @@ falls du mehr brauchst.
 Gerechnet wird nur der Direktschall, ohne Wände und ohne Reflexionen - für
 die Ortung ist der erste Schall entscheidend, alles danach kommt zu spät.
 
-- **Weglänge** zu jeder Box, schlicht aus der Geometrie.
+- **Weglänge** zu jeder Box, schlicht aus der Geometrie - die Boxen
+  stehen frei im Raum, symmetrisch müssen sie nicht sein.
 - **Verzögerung:** die nähere Box wartet, bis die weitere eingeholt hat,
   also `(dmax - d) / 343 m/s`. Verzögert wird immer nur - Schall vorziehen
   kann niemand.
@@ -88,7 +94,7 @@ auval -v aufx Hp01 Dpnk
   Laufzeitunterschieds über ein Raster von Positionen.
 - `audio_check` - ein Impuls durch das fertige Plugin: Lage und Höhe in
   beiden Kanälen, auch mit den beiden Umgehungen.
-- `ui_shot bild.png w=940 h=600 scale=2 spk=5.5 rw=6.5 rd=6.5 x=0 y=4.76` -
+- `ui_shot bild.png w=940 h=560 scale=2 lx=-2.9 ly=0.4 rx=2.7 ry=1.6 x=-2 y=3.4` -
   zeichnet die Oberfläche in eine PNG-Datei, ohne dass ein Fenster aufgeht.
   Das Bild oben stammt daher.
 
