@@ -83,9 +83,15 @@ JUCE wird aus `~/Documents/JUCE` eingebunden; ein anderer Ort geht über
 Audio Unit installieren und prüfen:
 
 ```
-cp -R build/Hoerplatz_artefacts/Release/AU/Hoerplatz.component ~/Library/Audio/Plug-Ins/Components/
+tools/install-au.sh
 auval -v aufx Hp01 Dpnk
 ```
+
+Das Skript räumt eine vorhandene Fassung erst weg und signiert die neue
+ad-hoc. Kopiert man stattdessen über ein schon installiertes Bundle, bleibt
+ein `_CodeSignature` zurück, das nicht mehr zum Inhalt passt - macOS schießt
+den ladenden Host dann mit „Code Signature Invalid" ab, und im Host dreht
+sich nur der Ladekreisel.
 
 ## Prüfungen
 
