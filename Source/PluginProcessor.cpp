@@ -15,6 +15,7 @@ HoerplatzProcessor::HoerplatzProcessor()
     pListenerY       = apvts.getRawParameterValue (Params::listenerY);
     pBypassDelay     = apvts.getRawParameterValue (Params::bypassDelay);
     pBypassGain      = apvts.getRawParameterValue (Params::bypassGain);
+    pGainAmount      = apvts.getRawParameterValue (Params::gainAmount);
 }
 
 bool HoerplatzProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -62,7 +63,8 @@ Geometry::Alignment HoerplatzProcessor::currentAlignment() const
 {
     return Geometry::compute ({ pLeftX->load(),  pLeftY->load() },
                               { pRightX->load(), pRightY->load() },
-                              { pListenerX->load(), pListenerY->load() });
+                              { pListenerX->load(), pListenerY->load() },
+                              pGainAmount->load() * 0.01);
 }
 
 void HoerplatzProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)

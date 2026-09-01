@@ -48,5 +48,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout Params::createLayout()
     layout.add (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { bypassGain, 1 }, "Bypass Pegel", false));
 
+    // Wie weit der Pegelausgleich geht. 100 % ist die Rechnung nach 1/r,
+    // wie sie im Freien gilt; im Raum traegt der Diffusschall dazu bei, dass
+    // der Unterschied kleiner ausfaellt - dann passen niedrigere Werte
+    // besser zum Gehoerten. Ueber 100 % laesst sich die Mitte auch bewusst
+    // ueberziehen.
+    layout.add (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { gainAmount, 1 }, "Pegel-Ausgleich",
+        juce::NormalisableRange<float> { 0.0f, 200.0f, 1.0f }, 100.0f,
+        juce::AudioParameterFloatAttributes{}.withStringFromValueFunction (
+            [] (float v, int) { return juce::String ((int) v) + " %"; })));
+
     return layout;
 }

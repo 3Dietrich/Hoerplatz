@@ -64,6 +64,12 @@ private:
     Row roomWidth, roomDepth, listenerX, listenerY;
 
     juce::ToggleButton bypassDelay, bypassGain;
+
+    // Wie weit der Pegelausgleich geht - steht beim Pegel-Bypass, weil beide
+    // dasselbe betreffen.
+    juce::Slider gainAmountKnob;
+    juce::Label gainAmountLabel;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAmountAttach;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassDelayAttach, bypassGainAttach;
 
     juce::Label areaLabel;
@@ -80,6 +86,12 @@ private:
     struct MonoLookAndFeel : juce::LookAndFeel_V4
     {
         juce::Label* createSliderTextBox (juce::Slider&) override;
+
+        // Schlanker Ring statt des dicken Bogens der Vorgabe - dieselbe
+        // zurueckhaltende Linienstaerke wie im Rest der Oberflaeche.
+        void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height,
+                               float sliderPos, float startAngle, float endAngle,
+                               juce::Slider&) override;
     };
     MonoLookAndFeel monoLnf;
 

@@ -92,6 +92,23 @@ int main()
         CHECK (near (Geometry::speakerDistance (l, r), len, 1e-12));
     }
 
+    // Anteil des Pegelausgleichs: 0 laesst die Pegel in Ruhe, 2 verdoppelt
+    // die Absenkung in Dezibel. Die Laufzeit bleibt davon unberuehrt.
+    {
+        const Geometry::Point seat { -1.2, 3.35 };
+        const auto full = Geometry::compute (boxL, boxR, seat, 1.0);
+        const auto none = Geometry::compute (boxL, boxR, seat, 0.0);
+        const auto over = Geometry::compute (boxL, boxR, seat, 2.0);
+
+        CHECK (near (none.gainL, 1.0) && near (none.gainR, 1.0));
+        CHECK (near (none.delayL, full.delayL) && near (none.delayR, full.delayR));
+        CHECK (over.gainL < full.gainL);
+
+        const double dbFull = 20.0 * std::log10 (full.gainL);
+        const double dbOver = 20.0 * std::log10 (over.gainL);
+        CHECK (near (dbOver, 2.0 * dbFull, 1e-9));
+    }
+
     // Der Laufzeitunterschied kann den Abstand der Boxen nie ueberschreiten
     // (Dreiecksungleichung) - davon haengt die Groesse des Delaypuffers ab.
     {

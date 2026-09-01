@@ -33,6 +33,7 @@ Mittelsenkrechte zwischen den Boxen - überall darauf hörst du symmetrisch.
 | Hörplatz seitlich, Abstand | dein Platz, gemessen von der Mitte der vorderen Wand |
 | Bypass Laufzeit | lässt die Verzögerung unangetastet |
 | Bypass Pegel | lässt die Lautstärke unangetastet |
+| Ausgleich | wie weit die Pegelkorrektur geht, 0 bis 200 % |
 
 Die beiden Bypass-Schalter sind zum Vergleichen da: einmal mit, einmal ohne.
 Der Unterschied ist deutlicher, als man erwartet.
@@ -60,6 +61,13 @@ die Ortung ist der erste Schall entscheidend, alles danach kommt zu spät.
 - **Pegel:** der Schalldruck fällt mit `1/r`, die nähere Box wird also im
   Verhältnis der Weglängen abgesenkt (`d / dmax`). Der lautere Kanal bleibt
   bei 0 dB, übersteuern kann dabei nichts.
+- **Ausgleich:** das `1/r` gilt im Freien. In einem Raum kommt Diffusschall
+  dazu, der Pegel fällt flacher ab als 6 dB pro Abstandsverdopplung - die
+  volle Korrektur ist dann zu viel und die Mitte kippt zur ferneren Box.
+  Der Regler skaliert deshalb den Dezibelwert: `(d/dmax)^n` mit n zwischen 0
+  und 2. 100 % ist die Rechnung fürs Freie, in möblierten Räumen sitzt der
+  Punkt nach Gehör oft darunter, und über 100 % lässt sich die Mitte
+  bewusst überziehen.
 
 Der Laufzeitunterschied kann nie größer werden als der Boxenabstand geteilt
 durch die Schallgeschwindigkeit - bei 12 m Abstand sind das 35 ms.

@@ -43,7 +43,12 @@ namespace Geometry
         double gainRatio() const { return std::min (gainL, gainR); }
     };
 
-    inline Alignment compute (Point left, Point right, Point listener)
+    // gainAmount steuert, wie weit der Pegelausgleich geht: 1.0 ist die
+    // volle Rechnung nach 1/r, 0.0 laesst die Pegel in Ruhe, 2.0 verdoppelt
+    // die Absenkung in Dezibel. Im Raum faellt der Pegel wegen des
+    // Diffusschalls flacher ab als im Freien - dort liegt das Gehoerte
+    // naeher an Werten unter 1.0.
+    inline Alignment compute (Point left, Point right, Point listener, double gainAmount = 1.0)
     {
         Alignment a;
 
@@ -68,8 +73,10 @@ namespace Geometry
         // Hoerplatz gleich laut ankommen, wird die naehere abgesenkt - im
         // Verhaeltnis der Abstaende. Angehoben wird nie, der lauteste Kanal
         // bleibt bei 1.0, so kann nichts uebersteuern.
-        a.gainL = a.distL / far;
-        a.gainR = a.distR / far;
+        // Als Potenz gerechnet, weil der Anteil in Dezibel wirken soll:
+        // (d/dmax)^n entspricht dem n-fachen Dezibelwert.
+        a.gainL = std::pow (a.distL / far, gainAmount);
+        a.gainR = std::pow (a.distR / far, gainAmount);
 
         // Richtungen zu den Boxen, normiert.
         const double nlx = lx / a.distL, nly = ly / a.distL;

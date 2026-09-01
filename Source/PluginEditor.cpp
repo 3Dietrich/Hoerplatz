@@ -75,6 +75,35 @@ juce::Label* HoerplatzEditor::MonoLookAndFeel::createSliderTextBox (juce::Slider
     return label;
 }
 
+void HoerplatzEditor::MonoLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y,
+                                                         int width, int height, float sliderPos,
+                                                         float startAngle, float endAngle,
+                                                         juce::Slider&)
+{
+    const auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (3.0f);
+    const float radius = juce::jmin (bounds.getWidth(), bounds.getHeight()) * 0.5f;
+    const auto centre = bounds.getCentre();
+    const float angle = startAngle + sliderPos * (endAngle - startAngle);
+    const float ring = radius - 3.0f;
+
+    juce::Path back;
+    back.addCentredArc (centre.x, centre.y, ring, ring, 0.0f, startAngle, endAngle, true);
+    g.setColour (Theme::surface2);
+    g.strokePath (back, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved,
+                                              juce::PathStrokeType::rounded));
+
+    juce::Path value;
+    value.addCentredArc (centre.x, centre.y, ring, ring, 0.0f, startAngle, angle, true);
+    g.setColour (Theme::cyan);
+    g.strokePath (value, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved,
+                                               juce::PathStrokeType::rounded));
+
+    const juce::Point<float> tip { centre.x + std::sin (angle) * (ring - 2.0f),
+                                   centre.y - std::cos (angle) * (ring - 2.0f) };
+    g.setColour (Theme::cyan);
+    g.drawLine ({ centre + (tip - centre) * 0.35f, tip }, 2.0f);
+}
+
 HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     : AudioProcessorEditor (&p), plugin (p), room (p), readout (p)
 {
@@ -126,6 +155,23 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
         plugin.apvts, Params::bypassDelay, bypassDelay);
     bypassGainAttach = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (
         plugin.apvts, Params::bypassGain, bypassGain);
+
+    gainAmountKnob.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+    gainAmountKnob.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 52, 13);
+    gainAmountKnob.setColour (juce::Slider::rotarySliderFillColourId, Theme::cyan);
+    gainAmountKnob.setColour (juce::Slider::rotarySliderOutlineColourId, Theme::surface2);
+    gainAmountKnob.setColour (juce::Slider::thumbColourId, Theme::cyan);
+    gainAmountKnob.setColour (juce::Slider::textBoxTextColourId, Theme::text);
+    gainAmountKnob.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+    gainAmountKnob.setColour (juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
+    addAndMakeVisible (gainAmountKnob);
+    gainAmountAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+        plugin.apvts, Params::gainAmount, gainAmountKnob);
+
+    gainAmountLabel.setFont (juce::Font (juce::FontOptions (11.0f)));
+    gainAmountLabel.setColour (juce::Label::textColourId, Theme::textDim);
+    gainAmountLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (gainAmountLabel);
 
     areaLabel.setFont (monoFont (12.0f));
     areaLabel.setColour (juce::Label::textColourId, Theme::textDim);
@@ -208,6 +254,9 @@ void HoerplatzEditor::applyLanguage()
     roomDepth.label.setText (t.roomDepth, juce::dontSendNotification);
     listenerX.label.setText (t.listenerX, juce::dontSendNotification);
     listenerY.label.setText (t.listenerY, juce::dontSendNotification);
+
+    gainAmountLabel.setText (t.gainAmount, juce::dontSendNotification);
+    gainAmountKnob.setTooltip (t.helpGainAmount);
 
     bypassDelay.setButtonText (t.bypassDelay);
     bypassGain.setButtonText (t.bypassGain);
@@ -355,8 +404,15 @@ void HoerplatzEditor::resized()
     place (listenerY);
 
     side.removeFromTop (4);
-    bypassDelay.setBounds (side.removeFromTop (22));
-    bypassGain.setBounds (side.removeFromTop (22));
+    auto bypassArea = side.removeFromTop (78);
+    auto knobArea = bypassArea.removeFromRight (78);
+    gainAmountLabel.setBounds (knobArea.removeFromTop (13));
+    gainAmountKnob.setBounds (knobArea);
+
+    // Die beiden Schalter stehen mittig zum Knopf daneben.
+    auto switches = bypassArea.withSizeKeepingCentre (bypassArea.getWidth(), 44);
+    bypassDelay.setBounds (switches.removeFromTop (22));
+    bypassGain.setBounds (switches.removeFromTop (22));
     side.removeFromTop (10);
 
     readout.setBounds (side.removeFromTop (juce::jmin (70, side.getHeight())));

@@ -21,6 +21,7 @@ namespace Params
     inline constexpr const char* listenerY  = "posY";
     inline constexpr const char* bypassDelay = "byDelay";
     inline constexpr const char* bypassGain  = "byGain";
+    inline constexpr const char* gainAmount  = "gainAmt";
 
     // Sprache und Hilfe sind Sache der Oberflaeche, nicht des Klangs. Sie
     // liegen deshalb als Eigenschaften im gespeicherten Zustand und nicht

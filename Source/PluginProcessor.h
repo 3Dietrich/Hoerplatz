@@ -63,6 +63,7 @@ private:
     std::atomic<float>* pListenerY = nullptr;
     std::atomic<float>* pBypassDelay = nullptr;
     std::atomic<float>* pBypassGain = nullptr;
+    std::atomic<float>* pGainAmount = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HoerplatzProcessor)
 };

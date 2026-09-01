@@ -30,6 +30,7 @@ struct Texts
 
     Text bypassDelay;
     Text bypassGain;
+    Text gainAmount;
 
     Text correction;     // Ueberschrift des Zahlenfelds
     Text delayRow;
@@ -52,6 +53,7 @@ struct Texts
     Text helpListenerY;
     Text helpBypassDelay;
     Text helpBypassGain;
+    Text helpGainAmount;
     Text helpReadout;
 };
 
