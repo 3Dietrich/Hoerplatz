@@ -182,20 +182,19 @@ void RoomComponent::paint (juce::Graphics& g)
                     juce::Justification::centred);
     }
 
-    // Wege vom Hoerplatz zu den Boxen, mit ihrer Laenge beschriftet. Der
-    // laengere Weg gibt den Takt vor - er bekommt die kraeftigere Linie.
-    const bool leftIsFar = a.distL >= a.distR;
+    // Wege vom Hoerplatz zu den Boxen, mit ihrer Laenge beschriftet. Beide
+    // gleich hell: es sind zwei Wege zu zwei Ohren, keiner ist wichtiger als
+    // der andere. Welcher der laengere ist, sagen die Zahlen.
     for (int side = 0; side < 2; ++side)
     {
         const auto from = (side == 0 ? lPos : rPos);
-        const bool isFar = (side == 0 ? leftIsFar : ! leftIsFar);
         const double dist = (side == 0 ? a.distL : a.distR);
 
-        g.setColour (juce::Colours::white.withAlpha (isFar ? 0.30f : 0.14f));
-        g.drawLine ({ from, hPos }, isFar ? 1.4f : 1.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.24f));
+        g.drawLine ({ from, hPos }, 1.2f);
 
         const auto mid = from + (hPos - from) * 0.55f;
-        g.setColour (Theme::textDim.withAlpha (isFar ? 0.95f : 0.6f));
+        g.setColour (Theme::textDim.withAlpha (0.85f));
         g.setFont (juce::FontOptions (juce::Font::getDefaultMonospacedFontName(), Theme::smallText, juce::Font::plain));
         g.drawText (metreText (dist), juce::Rectangle<float> (mid.x - 38.0f, mid.y - 16.0f, 76.0f, 16.0f),
                     juce::Justification::centred);

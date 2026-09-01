@@ -220,9 +220,11 @@ int main()
         juce::AudioBuffer<float> buffer (2, block);
         juce::MidiBuffer midi;
 
+        double rms = 0.0;
         auto runFor = [&] (double seconds, double& peak, double& correlation)
         {
             double sumLL = 0.0, sumRR = 0.0, sumLR = 0.0;
+            int counted = 0;
             peak = 0.0;
 
             for (int done = 0; done < (int) (seconds * sr); done += block)
@@ -236,8 +238,11 @@ int main()
                     const double r = buffer.getSample (1, i);
                     peak = std::max (peak, std::max (std::abs (l), std::abs (r)));
                     sumLL += l * l; sumRR += r * r; sumLR += l * r;
+                    ++counted;
                 }
             }
+
+            rms = counted > 0 ? std::sqrt (0.5 * (sumLL + sumRR) / counted) : 0.0;
 
             const double denom = std::sqrt (sumLL * sumRR);
             correlation = denom > 1.0e-12 ? sumLR / denom : 1.0;
@@ -252,18 +257,23 @@ int main()
         // An: hoerbar, und beide Kanaele tragen dasselbe.
         proc.testTone.setActive (true);
         runFor (1.5, peak, corr);
-        CHECK (peak > 0.02 && peak < 0.5);
+        CHECK (peak > 0.02 && peak < 0.8);
         CHECK (corr > 0.9999);
-        std::printf ("Testgeraeusch an: Spitze %.3f, Gleichlauf %.4f\n", peak, corr);
+        std::printf ("Testgeraeusch an: Spitze %.3f, Mittelwert %.1f dB, Gleichlauf %.4f\n",
+                     peak, 20.0 * std::log10 (rms), corr);
 
-        // Aus: der Ausklang laeuft weiter und geht auseinander.
+        // Aus: der Uebergang laeuft noch aus der Mitte heraus.
         proc.testTone.setActive (false);
-        runFor (1.2, peak, corr);
+        runFor (0.4, peak, corr);
         CHECK (proc.testTone.isSounding());
+        CHECK (peak > 0.02);
+
+        // Und danach steht die Fahne - beide Seiten weitgehend unabhaengig.
+        runFor (1.2, peak, corr);
         CHECK (peak > 0.005);
-        // Auseinandergelaufen bis zur Unabhaengigkeit - das ist die Fahne.
         CHECK (corr < 0.3);
-        std::printf ("Ausklang: Spitze %.3f, Gleichlauf %.4f\n", peak, corr);
+        std::printf ("Ausklang: Spitze %.3f, Mittelwert %.1f dB, Gleichlauf %.4f\n",
+                     peak, 20.0 * std::log10 (rms), corr);
 
         // Und danach ist Ruhe.
         runFor (2.5, peak, corr);

@@ -5,13 +5,13 @@
 
 namespace
 {
-    constexpr double pulsePeriod = 0.50;    // Abstand der Impulse
+    constexpr double pulsePeriod = 0.40;    // Abstand der Impulse
     constexpr double pulseAttack = 0.00015; // Anstieg: praktisch senkrecht
-    constexpr double pulseDecay  = 0.008;   // Abfall im Betrieb - ein kurzes Tack
-    constexpr float  pulseLevel  = 0.13f;
+    constexpr double pulseDecay  = 0.030;   // Abfall im Betrieb - ein kurzes Tack
+    constexpr float  pulseLevel  = 0.45f;   // Spitze rund -7 dBFS
 
-    constexpr double widenTime = 0.70;      // Zeit, in der sich das Bild oeffnet
-    constexpr double fadeTau   = 0.85;      // Abklingen beim Verduennen
+    constexpr double widenTime = 0.35;      // Zeit, in der sich das Bild oeffnet
+    constexpr double fadeTau   = 1.05;      // Abklingen beim Verduennen
     constexpr double fadeMax   = 3.20;      // danach ist Ruhe
 
     constexpr double tailDecay = 0.35;      // Abfall am Ende des Verduennens
@@ -189,7 +189,12 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
             const float ownL = leftOnly.next();
             const float ownR = rightOnly.next();
 
-            const float gain = env * pulseLevel * (float) level;
+            // Dichtere und laengere Impulse tragen mehr Energie. Ohne
+            // Ausgleich wuerde das Verduennen lauter beginnen als der
+            // Betrieb - der Faktor haelt die mittlere Leistung gleich, den
+            // Rueckgang besorgt allein das Abklingen.
+            const double density = std::sqrt ((period / pulsePeriod) * (pulseDecay / decay));
+            const float gain = env * pulseLevel * (float) (level * density);
             sampleL = (shared * centre + ownL * sides) * gain;
             sampleR = (shared * centre + ownR * sides) * gain;
 
