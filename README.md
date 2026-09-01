@@ -42,36 +42,21 @@ Der Unterschied ist deutlicher, als man erwartet.
 Unten rechts steht knapp, was gerade passiert: welche Seite korrigiert wird
 und um wieviel - Verzögerung in Millisekunden, Absenkung in Dezibel.
 
-**Zum Einrichten: das Testgeräusch.** Der Schalter ganz unten spielt kurze,
-scharfe Impulse aus rosa Rauschen, auf beiden Kanälen identisch. Die Flanke
-steht praktisch senkrecht - daran hängt alles: ein weicher Einsatz
-verschmiert Laufzeitunterschiede unterhalb weniger Millisekunden, und genau
-die will man hier beurteilen. Der kurze Nachhauch dahinter trägt das breite
-Band für den Pegel. Stimmt die Einstellung, steht das Geräusch als ein
-einziger Punkt zwischen den Boxen; stimmt sie nicht, wandert oder verschmiert
-er. Zwischen den Impulsen ist Ruhe, damit man es lange nebenher laufen lassen
-kann. Solange es läuft, tritt die Musik zurück.
+**Zum Einrichten: das Testgeräusch.** Kurze, scharfe Impulse aus rosa
+Rauschen, auf beiden Kanälen identisch. Die senkrechte Flanke ist das
+Werkzeug - ein weicher Einsatz verschmiert genau die Millisekunden, die man
+hier beurteilen will. Stimmt die Einstellung, steht das Geräusch als ein
+Punkt zwischen den Boxen; stimmt sie nicht, wandert oder verschmiert er.
+Solange es läuft, tritt die Musik zurück.
 
-Beim Ausschalten hört es nicht auf, sondern verdünnt sich: die Impulse rücken
-zusammen und gehen abwechselnd nach links und rechts - der erste steht noch
-in der Mitte, die folgenden immer weiter draußen, bis die Auslenkung nach
-400 ms voll ist. Jeder bekommt Laufzeit **und** Pegel seiner Position, denn
-im Kopfhörer trägt die Laufzeit die Ortung; bloß unterschiedliches Rauschen
-klingt diffus im Kopf, nicht weit außen. Dazu macht ein Tiefpass zu, und das
-Ganze klingt über gut zwei Sekunden aus. Der Knopf leuchtet nach, solange die
-Fahne steht; danach kommt die Musik zurück.
+Beim Ausschalten verdünnt es sich: die Impulse gehen abwechselnd nach links
+und rechts, aus der Mitte heraus immer weiter hinaus, und klingen über gut
+zwei Sekunden aus.
 
-**Wenn es klein werden soll**, zieh das Fenster einfach zusammen: was nur der
-Übersicht dient, weicht zuerst. Erst geht der Grundriss - und mit ihm die
-Raummaße, die ohne ihn nichts mehr bedeuten -, dann das Zahlenfeld, zuletzt
-rücken Beschriftung und Regler in eine Zeile zusammen. Übrig bleibt, womit
-man wirklich einstellt: Boxenabstand, Hörplatz, die beiden Bypässe mit dem
-Ausgleich und das Testgeräusch. Am Ende passt das auf 300 × 250 Punkte.
+**Klein ziehen** geht bis 300 × 250 Punkte. Was nur der Übersicht dient,
+weicht zuerst: erst der Grundriss samt Raummaßen, dann das Zahlenfeld.
 
 ![Drei Stufen beim Verkleinern](docs/kompakt.png)
-
-Dass Raummaße und Zahlenfeld weicher und kleiner gezeichnet sind als der
-Rest, hat denselben Grund: mit ihnen stellt man nichts ein.
 
 Oben rechts sitzen zwei Schalter: **EN/DE** stellt die Sprache um, **?**
 schaltet die Hilfetexte ein und aus, die beim Verweilen über einem
