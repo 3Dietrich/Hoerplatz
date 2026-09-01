@@ -53,13 +53,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout Params::createLayout()
     // Unterschied zwischen nah und fern faellt dort viel kleiner aus, die
     // volle Korrektur senkt die naehere Box also zu weit ab.
     //
-    // Die Vorgabe von 30 % ist kein gerundeter Schaetzwert, sondern der am
-    // Hoerplatz eingestellte: bei Wegen von 0,9 m und 4,6 m rechnet 1/r
-    // -14,0 dB, gehoert richtig waren -4,2 dB. Ueber 100 % laesst sich die
-    // Mitte bewusst ueberziehen.
+    // 100 % ist der am Hoerplatz eingestellte Normalfall und liegt deshalb in
+    // der Mitte des Reglerweges; die Rechnung fuers Freie sitzt bei rund
+    // 141 %, die doppelte Absenkung am oberen Anschlag. Die Umrechnung von
+    // Prozent auf den Exponenten steht in Geometry::gainExponent.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { gainAmount, 1 }, "Pegel-Ausgleich",
-        juce::NormalisableRange<float> { 0.0f, 200.0f, 1.0f }, 30.0f,
+        juce::NormalisableRange<float> { 0.0f, 200.0f, 1.0f }, 100.0f,
         juce::AudioParameterFloatAttributes{}.withStringFromValueFunction (
             [] (float v, int) { return juce::String ((int) v) + " %"; })));
 

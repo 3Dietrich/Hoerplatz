@@ -20,6 +20,29 @@ namespace Geometry
     // Schallgeschwindigkeit in Luft bei rund 20 Grad.
     inline constexpr double speedOfSound = 343.0;
 
+    // Der Pegelausgleich rechnet mit einem Exponenten: (d/dmax)^n, was den
+    // Dezibelwert von 1/r mit n vervielfacht. n = 1 ist die Rechnung fuers
+    // Freie, im Raum ist sie zu scharf - dort traegt der Diffusschall dazu
+    // bei, dass der Unterschied zwischen nah und fern viel kleiner ausfaellt.
+    // Am Hoerplatz nachgemessen: bei Wegen von 0,9 m und 4,6 m verlangt 1/r
+    // -14,0 dB, gehoert richtig waren -4,2 dB.
+    inline constexpr double roomExponent = 0.30;
+
+    // Der Regler zeigt Prozent, und 100 % ist dieser gehoerte Normalfall -
+    // nicht die reine Lehre. So steht die Vorgabe in der Mitte des Weges und
+    // man sieht am Zeiger, ob man darueber oder darunter liegt. Unterhalb
+    // laeuft die Skala gleichmaessig auf null, oberhalb weiter bis zum
+    // doppelten Dezibelwert von 1/r; das Freifeld liegt bei rund 141 %.
+    inline constexpr double maxExponent = 2.0;
+
+    inline double gainExponent (double percent)
+    {
+        const double p = std::max (0.0, percent);
+        return p <= 100.0
+             ? roomExponent * p * 0.01
+             : roomExponent + (p - 100.0) * 0.01 * (maxExponent - roomExponent);
+    }
+
     struct Point { double x = 0.0, y = 0.0; };
 
     struct Alignment

@@ -64,7 +64,7 @@ Geometry::Alignment HoerplatzProcessor::currentAlignment() const
     return Geometry::compute ({ pLeftX->load(),  pLeftY->load() },
                               { pRightX->load(), pRightY->load() },
                               { pListenerX->load(), pListenerY->load() },
-                              pGainAmount->load() * 0.01);
+                              Geometry::gainExponent (pGainAmount->load()));
 }
 
 void HoerplatzProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)

@@ -109,6 +109,21 @@ int main()
         CHECK (near (dbOver, 2.0 * dbFull, 1e-9));
     }
 
+    // Die Prozentskala des Reglers: 100 % ist der im Raum gehoerte
+    // Normalfall und liegt in der Mitte, 141 % die Rechnung fuers Freie,
+    // die Enden bleiben bei 0 und dem doppelten Dezibelwert.
+    {
+        CHECK (near (Geometry::gainExponent (0.0), 0.0));
+        CHECK (near (Geometry::gainExponent (100.0), Geometry::roomExponent));
+        CHECK (near (Geometry::gainExponent (200.0), Geometry::maxExponent));
+        CHECK (std::fabs (Geometry::gainExponent (141.0) - 1.0) < 0.01);
+        // Monoton und ohne Sprung an der Nahtstelle.
+        CHECK (Geometry::gainExponent (99.9) < Geometry::gainExponent (100.1));
+        CHECK (std::fabs (Geometry::gainExponent (99.9) - Geometry::gainExponent (100.1)) < 0.01);
+        // Halber Weg unter 100 % ist auch halbe Korrektur.
+        CHECK (near (Geometry::gainExponent (50.0), 0.5 * Geometry::roomExponent));
+    }
+
     // Der Laufzeitunterschied kann den Abstand der Boxen nie ueberschreiten
     // (Dreiecksungleichung) - davon haengt die Groesse des Delaypuffers ab.
     {

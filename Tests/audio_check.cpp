@@ -85,11 +85,12 @@ int main()
         HoerplatzProcessor proc;
         setParam (proc, Params::leftX, -2.75f);
         setParam (proc, Params::rightX, 2.75f);
-        setParam (proc, Params::gainAmount, 100.0f);
+        setParam (proc, Params::gainAmount, 141.0f);
         setParam (proc, Params::listenerX, -2.1f);
         setParam (proc, Params::listenerY,  1.6f);
 
-        const auto a = Geometry::compute ({ -2.75, 0.35 }, { 2.75, 0.35 }, { -2.1, 1.6 });
+        const auto a = Geometry::compute ({ -2.75, 0.35 }, { 2.75, 0.35 }, { -2.1, 1.6 },
+                                          Geometry::gainExponent (141.0));
         const auto buffer = impulseResponse (proc, sr, 2048);
 
         const auto l = findPeak (buffer, 0);
@@ -116,7 +117,7 @@ int main()
         HoerplatzProcessor proc;
         setParam (proc, Params::leftX, -2.75f);
         setParam (proc, Params::rightX, 2.75f);
-        setParam (proc, Params::gainAmount, 100.0f);
+        setParam (proc, Params::gainAmount, 141.0f);
         setParam (proc, Params::listenerX, -2.1f);
         setParam (proc, Params::listenerY,  1.6f);
         setParam (proc, Params::bypassDelay, 1.0f);
@@ -137,12 +138,13 @@ int main()
         HoerplatzProcessor proc;
         setParam (proc, Params::leftX, -2.75f);
         setParam (proc, Params::rightX, 2.75f);
-        setParam (proc, Params::gainAmount, 100.0f);
+        setParam (proc, Params::gainAmount, 141.0f);
         setParam (proc, Params::listenerX, 1.8f);
         setParam (proc, Params::listenerY, 2.0f);
         setParam (proc, Params::bypassDelay, 1.0f);
 
-        const auto a = Geometry::compute ({ -2.75, 0.35 }, { 2.75, 0.35 }, { 1.8, 2.0 });
+        const auto a = Geometry::compute ({ -2.75, 0.35 }, { 2.75, 0.35 }, { 1.8, 2.0 },
+                                          Geometry::gainExponent (141.0));
         const auto buffer = impulseResponse (proc, sr, 1024);
         const auto l = findPeak (buffer, 0);
         const auto r = findPeak (buffer, 1);
@@ -152,24 +154,24 @@ int main()
         CHECK (std::abs (sumOf (buffer, 1) - (float) a.gainR) < 0.02f);
     }
 
-    // Der Ausgleich-Regler wirkt in Dezibel: 30 % ergeben genau drei Zehntel
-    // des vollen Wertes.
+    // Die Reglermitte wirkt in Dezibel: 100 % ergeben genau den im Raum
+    // gehoerten Anteil des vollen 1/r-Wertes.
     {
         HoerplatzProcessor proc;
         setParam (proc, Params::leftX, -2.75f);
         setParam (proc, Params::rightX, 2.75f);
         setParam (proc, Params::listenerX, -2.1f);
         setParam (proc, Params::listenerY,  1.6f);
-        setParam (proc, Params::gainAmount, 30.0f);
+        setParam (proc, Params::gainAmount, 100.0f);
 
         const auto full = Geometry::compute ({ -2.75, 0.35 }, { 2.75, 0.35 }, { -2.1, 1.6 }, 1.0);
         const auto buffer = impulseResponse (proc, sr, 2048);
 
         const double dbFull = 20.0 * std::log10 (full.gainL);
         const double dbHeard = 20.0 * std::log10 (sumOf (buffer, 0));
-        CHECK (std::abs (dbHeard - 0.3 * dbFull) < 0.2);
+        CHECK (std::abs (dbHeard - Geometry::roomExponent * dbFull) < 0.2);
 
-        std::printf ("30 %%: %.1f dB (voll %.1f dB)\n", dbHeard, dbFull);
+        std::printf ("100 %%: %.1f dB (1/r waeren %.1f dB)\n", dbHeard, dbFull);
     }
 
     if (failures == 0)

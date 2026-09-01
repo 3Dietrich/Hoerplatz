@@ -33,7 +33,7 @@ Mittelsenkrechte zwischen den Boxen - überall darauf hörst du symmetrisch.
 | Hörplatz seitlich, Abstand | dein Platz, gemessen von der Mitte der vorderen Wand |
 | Bypass Laufzeit | lässt die Verzögerung unangetastet |
 | Bypass Pegel | lässt die Lautstärke unangetastet |
-| Ausgleich | wie weit die Pegelkorrektur geht, 0 bis 200 % |
+| Ausgleich | wie weit die Pegelkorrektur geht; 100 % ist der Normalfall im Raum |
 
 Die beiden Bypass-Schalter sind zum Vergleichen da: einmal mit, einmal ohne.
 Der Unterschied ist deutlicher, als man erwartet.
