@@ -30,4 +30,9 @@ namespace Params
     inline constexpr const char* showHelp = "hilfe";
 
     juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
+
+    // Zahl aus einer Eingabe lesen. Nimmt Komma wie Punkt und ignoriert
+    // alles, was keine Zahl ist - "3,20 m" und "3.2" fuehren zum selben
+    // Wert wie "3,2 Meter".
+    double parseNumber (const juce::String& text);
 }

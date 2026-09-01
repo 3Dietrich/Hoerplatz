@@ -17,8 +17,19 @@ namespace
         return std::make_unique<juce::AudioParameterFloat> (
             juce::ParameterID { id, 1 }, name,
             juce::NormalisableRange<float> { lo, hi, step }, def,
-            juce::AudioParameterFloatAttributes{}.withStringFromValueFunction (metres));
+            juce::AudioParameterFloatAttributes{}
+                .withStringFromValueFunction (metres)
+                .withValueFromStringFunction ([] (const juce::String& t) { return (float) Params::parseNumber (t); }));
     }
+}
+
+double Params::parseNumber (const juce::String& text)
+{
+    return text.trim()
+               .replaceCharacter (',', '.')
+               .replace (juce::String::fromUTF8 ("\xe2\x88\x92"), "-")   // typografisches Minus
+               .retainCharacters ("0123456789.+-")
+               .getDoubleValue();
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout Params::createLayout()
@@ -60,8 +71,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout Params::createLayout()
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { gainAmount, 1 }, "Pegel-Ausgleich",
         juce::NormalisableRange<float> { 0.0f, 200.0f, 1.0f }, 100.0f,
-        juce::AudioParameterFloatAttributes{}.withStringFromValueFunction (
-            [] (float v, int) { return juce::String ((int) v) + " %"; })));
+        juce::AudioParameterFloatAttributes{}
+            .withStringFromValueFunction ([] (float v, int) { return juce::String ((int) v) + " %"; })
+            .withValueFromStringFunction ([] (const juce::String& t) { return (float) Params::parseNumber (t); })));
 
     return layout;
 }

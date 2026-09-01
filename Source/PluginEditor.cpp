@@ -120,11 +120,14 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     styleSlider (speakerDistance.slider);
     speakerDistance.slider.setRange (0.30, 24.0, 0.01);
     speakerDistance.slider.textFromValueFunction = [] (double v) { return juce::String (v, 2) + " m"; };
-    speakerDistance.slider.valueFromTextFunction = [] (const juce::String& s) { return s.getDoubleValue(); };
+    speakerDistance.slider.valueFromTextFunction = [] (const juce::String& s) { return Params::parseNumber (s); };
+
+    // Jede Aenderung hier kommt vom Benutzer - ob aus dem Textfeld, von der
+    // Maus oder von den Pfeiltasten. Der Abgleich mit den Boxpositionen im
+    // Timer laeuft ohne Benachrichtigung und loest deshalb nichts aus.
     speakerDistance.slider.onValueChange = [this]
     {
-        if (speakerDistance.slider.isMouseButtonDown() || speakerDistance.slider.hasKeyboardFocus (false))
-            setSpeakerDistance ((float) speakerDistance.slider.getValue());
+        setSpeakerDistance ((float) speakerDistance.slider.getValue());
     };
     speakerDistance.slider.onDragStart = [this]
     {
@@ -136,6 +139,9 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
         for (auto* id : { Params::leftX, Params::leftY, Params::rightX, Params::rightY })
             if (auto* prm = plugin.apvts.getParameter (id)) prm->endChangeGesture();
     };
+    // Kennung, damit die Pruefung den Regler findet, ohne die Reihenfolge
+    // der Kindkomponenten zu erraten.
+    speakerDistance.slider.setComponentID ("speakerDistance");
     addAndMakeVisible (speakerDistance.label);
     addAndMakeVisible (speakerDistance.slider);
 
@@ -303,7 +309,9 @@ void HoerplatzEditor::updateArea()
 
 void HoerplatzEditor::updateSpeakerDistanceSlider()
 {
-    if (speakerDistance.slider.isMouseButtonDown())
+    // Waehrend jemand den Wert eintippt oder zieht, bleibt die Anzeige in
+    // seiner Hand - sonst schriebe der Abgleich ihm in den Text hinein.
+    if (speakerDistance.slider.isMouseButtonDown() || speakerDistance.slider.hasKeyboardFocus (true))
         return;
 
     const Geometry::Point l { plugin.apvts.getRawParameterValue (Params::leftX)->load(),

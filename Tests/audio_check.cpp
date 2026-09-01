@@ -3,6 +3,7 @@
 // erwarteten Werte kommen aus der Geometrie, nicht aus dem Code, der sie
 // erzeugt hat.
 #include "../Source/PluginProcessor.h"
+#include "../Source/PluginEditor.h"
 
 #include <cmath>
 #include <cstdio>
@@ -172,6 +173,48 @@ int main()
         CHECK (std::abs (dbHeard - Geometry::roomExponent * dbFull) < 0.2);
 
         std::printf ("100 %%: %.1f dB (1/r waeren %.1f dB)\n", dbHeard, dbFull);
+    }
+
+    // Ein eingetippter Boxenabstand muss die Boxen wirklich verschieben.
+    // Der Regler hat keinen eigenen Parameter, er greift an beide Boxen -
+    // frueher verwarf er die Eingabe, weil beim Tippen der Tastaturfokus im
+    // Textfeld liegt und nicht auf dem Regler selbst.
+    {
+        HoerplatzProcessor proc;
+        std::unique_ptr<juce::AudioProcessorEditor> editor (proc.createEditor());
+
+        auto* slider = dynamic_cast<juce::Slider*> (editor->findChildWithID ("speakerDistance"));
+        CHECK (slider != nullptr);
+
+        if (slider != nullptr)
+        {
+            const double gewuenscht = 3.20;
+            slider->setValue (gewuenscht, juce::sendNotificationSync);
+
+            const Geometry::Point l { proc.apvts.getRawParameterValue (Params::leftX)->load(),
+                                      proc.apvts.getRawParameterValue (Params::leftY)->load() };
+            const Geometry::Point r { proc.apvts.getRawParameterValue (Params::rightX)->load(),
+                                      proc.apvts.getRawParameterValue (Params::rightY)->load() };
+
+            const double erreicht = Geometry::speakerDistance (l, r);
+            CHECK (std::abs (erreicht - gewuenscht) < 0.02);
+            std::printf ("Boxenabstand eingetippt: %.2f m -> %.2f m\n", gewuenscht, erreicht);
+
+            // Und derselbe Weg ueber den Text, so wie er im Feld ankommt.
+            CHECK (std::abs (slider->getValueFromText ("3,20 m") - 3.20) < 1e-9);
+        }
+    }
+
+    // Zahleneingabe: Komma wie Punkt, Einheit egal.
+    {
+        CHECK (std::abs (Params::parseNumber ("3.2")      - 3.2) < 1e-9);
+        CHECK (std::abs (Params::parseNumber ("3,2")      - 3.2) < 1e-9);
+        CHECK (std::abs (Params::parseNumber ("3,20 m")   - 3.2) < 1e-9);
+        CHECK (std::abs (Params::parseNumber (" 3.20 m ") - 3.2) < 1e-9);
+        CHECK (std::abs (Params::parseNumber ("3,2 Meter")- 3.2) < 1e-9);
+        CHECK (std::abs (Params::parseNumber ("-2,00 m")  + 2.0) < 1e-9);
+        CHECK (std::abs (Params::parseNumber (juce::String::fromUTF8 ("−2,00 m")) + 2.0) < 1e-9);
+        CHECK (std::abs (Params::parseNumber ("120 %")    - 120.0) < 1e-9);
     }
 
     if (failures == 0)
