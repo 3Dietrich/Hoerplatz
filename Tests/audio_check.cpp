@@ -221,13 +221,13 @@ int main()
         juce::MidiBuffer midi;
 
         double rms = 0.0;
-        double maxBalanceDb = 0.0;   // groesste Auslenkung nach einer Seite
+        double maxLeftDb = 0.0, maxRightDb = 0.0;   // groesste Auslenkung je Seite
         auto runFor = [&] (double seconds, double& peak, double& correlation)
         {
             double sumLL = 0.0, sumRR = 0.0, sumLR = 0.0;
             int counted = 0;
             peak = 0.0;
-            maxBalanceDb = 0.0;
+            maxLeftDb = maxRightDb = 0.0;
 
             for (int done = 0; done < (int) (seconds * sr); done += block)
             {
@@ -244,8 +244,11 @@ int main()
                     blockRR += buffer.getSample (1, i) * buffer.getSample (1, i);
                 }
                 if (blockLL > 1.0e-9 && blockRR > 1.0e-9)
-                    maxBalanceDb = std::max (maxBalanceDb,
-                                             std::abs (10.0 * std::log10 (blockLL / blockRR)));
+                {
+                    const double balance = 10.0 * std::log10 (blockLL / blockRR);
+                    maxLeftDb  = std::max (maxLeftDb,  balance);
+                    maxRightDb = std::max (maxRightDb, -balance);
+                }
 
                 for (int i = 0; i < block; ++i)
                 {
@@ -274,9 +277,9 @@ int main()
         runFor (1.5, peak, corr);
         CHECK (peak > 0.02 && peak < 0.8);
         CHECK (corr > 0.9999);
-        CHECK (maxBalanceDb < 0.01);   // im Betrieb steht es fest in der Mitte
+        CHECK (maxLeftDb < 0.01 && maxRightDb < 0.01);   // im Betrieb fest in der Mitte
         std::printf ("Testgeraeusch an: Spitze %.3f, Mittelwert %.1f dB, Gleichlauf %.4f, Balance bis %.2f dB\n",
-                     peak, 20.0 * std::log10 (rms), corr, maxBalanceDb);
+                     peak, 20.0 * std::log10 (rms), corr, std::max (maxLeftDb, maxRightDb));
 
         // Aus: der Uebergang laeuft noch aus der Mitte heraus.
         proc.testTone.setActive (false);
@@ -291,11 +294,11 @@ int main()
         // Seiten tragen dasselbe Rauschen, nur zeitversetzt und verschieden
         // laut. Der Gleichlauf darf dabei ruhig hoch bleiben.
         CHECK (corr < 0.95);
-        // Die Impulse blitzen ueber die ganze Breite auf, nicht nur diffus
-        // in der Mitte.
-        CHECK (maxBalanceDb > 6.0);
-        std::printf ("Ausklang: Spitze %.3f, Mittelwert %.1f dB, Gleichlauf %.4f, Balance bis %.1f dB\n",
-                     peak, 20.0 * std::log10 (rms), corr, maxBalanceDb);
+        // Die Tropfen gehen nach beiden Seiten hinaus, nicht nur diffus in
+        // die Mitte - und zwar auf jede Seite gleichermassen.
+        CHECK (maxLeftDb > 6.0 && maxRightDb > 6.0);
+        std::printf ("Ausklang: Spitze %.3f, Mittelwert %.1f dB, Gleichlauf %.4f, Balance bis %.1f dB links / %.1f dB rechts\n",
+                     peak, 20.0 * std::log10 (rms), corr, maxLeftDb, maxRightDb);
 
         // Und danach ist Ruhe.
         runFor (2.5, peak, corr);

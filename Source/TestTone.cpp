@@ -10,7 +10,10 @@ namespace
     constexpr double pulseDecay  = 0.030;   // Abfall im Betrieb - ein kurzes Tack
     constexpr float  pulseLevel  = 0.45f;   // Spitze rund -7 dBFS
 
-    constexpr double widenTime = 0.35;      // Zeit, in der sich das Bild oeffnet
+    constexpr double widenTime = 0.40;      // Anschwellen der Auslenkung:
+                                            // der erste Tropfen steht noch
+                                            // in der Mitte, die folgenden
+                                            // gehen immer weiter hinaus
     constexpr double fadeTau   = 1.05;      // Abklingen beim Verduennen
     constexpr double fadeMax   = 3.20;      // danach ist Ruhe
 
@@ -233,12 +236,20 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
             {
                 pulsePhase -= period;
 
-                // Jeder Impuls sucht sich beim Verduennen eine eigene Stelle
-                // im Bild. Im Betrieb bleibt er in der Mitte, dort soll ja
-                // nichts wandern.
-                panState = panState * 1664525u + 1013904223u;
-                const float roll = (float) ((int) (panState >> 8) - 8388608) / 8388608.0f;
-                pulsePan = fading ? roll : 0.0f;
+                // Beim Verduennen wechseln die Tropfen die Seite: links,
+                // rechts, links - und dabei jedesmal weiter hinaus, solange
+                // die Auslenkung anschwillt. Im Betrieb bleibt alles in der
+                // Mitte, dort soll ja nichts wandern.
+                if (fading)
+                {
+                    pulseSide = -pulseSide;
+                    pulsePan = pulseSide;
+                }
+                else
+                {
+                    pulseSide = 1.0f;   // der erste Tropfen geht nach links
+                    pulsePan = 0.0f;
+                }
             }
 
             // Senkrechte Flanke, dann exponentiell zurueck. Die Flanke ist

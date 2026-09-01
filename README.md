@@ -52,11 +52,14 @@ einziger Punkt zwischen den Boxen; stimmt sie nicht, wandert oder verschmiert
 er. Zwischen den Impulsen ist Ruhe, damit man es lange nebenher laufen lassen
 kann. Solange es läuft, tritt die Musik zurück.
 
-Beim Ausschalten hört es nicht auf, sondern verdünnt sich: die beiden Kanäle
-bekommen zunehmend eigenes Rauschen statt des gemeinsamen, die Impulse rücken
-zusammen und werden länger, ein Tiefpass macht zu. Aus dem Punkt in der Mitte
-wird in gut zwei Sekunden eine breite Wolke, die verschwindet. Der Knopf
-leuchtet nach, solange sie steht; danach kommt die Musik zurück.
+Beim Ausschalten hört es nicht auf, sondern verdünnt sich: die Impulse rücken
+zusammen und gehen abwechselnd nach links und rechts - der erste steht noch
+in der Mitte, die folgenden immer weiter draußen, bis die Auslenkung nach
+400 ms voll ist. Jeder bekommt Laufzeit **und** Pegel seiner Position, denn
+im Kopfhörer trägt die Laufzeit die Ortung; bloß unterschiedliches Rauschen
+klingt diffus im Kopf, nicht weit außen. Dazu macht ein Tiefpass zu, und das
+Ganze klingt über gut zwei Sekunden aus. Der Knopf leuchtet nach, solange die
+Fahne steht; danach kommt die Musik zurück.
 
 Oben rechts sitzen zwei Schalter: **EN/DE** stellt die Sprache um, **?**
 schaltet die Hilfetexte ein und aus, die beim Verweilen über einem
