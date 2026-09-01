@@ -183,6 +183,17 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     areaLabel.setColour (juce::Label::textColourId, Theme::textDim);
     addAndMakeVisible (areaLabel);
 
+    testToneButton.setClickingTogglesState (true);
+    testToneButton.setColour (juce::TextButton::buttonColourId, Theme::surface);
+    testToneButton.setColour (juce::TextButton::buttonOnColourId, Theme::amber.withAlpha (0.22f));
+    testToneButton.setColour (juce::TextButton::textColourOffId, Theme::textDim);
+    testToneButton.setColour (juce::TextButton::textColourOnId, Theme::amber);
+    testToneButton.onClick = [this]
+    {
+        plugin.testTone.setActive (testToneButton.getToggleState());
+    };
+    addAndMakeVisible (testToneButton);
+
     // Sprache und Hilfe: zwei kleine Schalter in der Kopfzeile.
     for (auto* b : { &langButton, &helpButton })
     {
@@ -262,6 +273,8 @@ void HoerplatzEditor::applyLanguage()
     listenerY.label.setText (t.listenerY, juce::dontSendNotification);
 
     gainAmountLabel.setText (t.gainAmount, juce::dontSendNotification);
+    testToneButton.setButtonText (t.testTone);
+    testToneButton.setTooltip (t.helpTestTone);
     gainAmountKnob.setTooltip (t.helpGainAmount);
 
     bypassDelay.setButtonText (t.bypassDelay);
@@ -424,6 +437,8 @@ void HoerplatzEditor::resized()
     side.removeFromTop (10);
 
     readout.setBounds (side.removeFromTop (juce::jmin (70, side.getHeight())));
+    side.removeFromTop (12);
+    testToneButton.setBounds (side.removeFromTop (26));
 }
 
 void HoerplatzEditor::timerCallback()
@@ -441,6 +456,18 @@ void HoerplatzEditor::timerCallback()
         showHelp = storedHelp;
         helpButton.setToggleState (showHelp, juce::dontSendNotification);
         applyHelp();
+    }
+
+    // Solange der Ausklang laeuft, leuchtet der Knopf nach - man sieht, dass
+    // das Geraeusch noch nicht ganz vorbei ist.
+    const bool sounding = plugin.testTone.isSounding();
+    if (sounding != tailWasSounding)
+    {
+        tailWasSounding = sounding;
+        const bool fading = sounding && ! testToneButton.getToggleState();
+        testToneButton.setColour (juce::TextButton::textColourOffId,
+                                  fading ? Theme::amber.withAlpha (0.55f) : Theme::textDim);
+        testToneButton.repaint();
     }
 
     updateArea();

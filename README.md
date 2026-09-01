@@ -33,6 +33,7 @@ Mittelsenkrechte zwischen den Boxen - überall darauf hörst du symmetrisch.
 | Hörplatz seitlich, Abstand | dein Platz, gemessen von der Mitte der vorderen Wand |
 | Bypass Laufzeit | lässt die Verzögerung unangetastet |
 | Bypass Pegel | lässt die Lautstärke unangetastet |
+| Testgeräusch | Impulse zum Einrichten; klingt beim Ausschalten in Stereo aus |
 | Ausgleich | wie weit die Pegelkorrektur geht; 100 % = `1/r`, Vorgabe 30 % |
 
 Die beiden Bypass-Schalter sind zum Vergleichen da: einmal mit, einmal ohne.
@@ -40,6 +41,19 @@ Der Unterschied ist deutlicher, als man erwartet.
 
 Unten rechts steht knapp, was gerade passiert: welche Seite korrigiert wird
 und um wieviel - Verzögerung in Millisekunden, Absenkung in Dezibel.
+
+**Zum Einrichten: das Testgeräusch.** Der Schalter ganz unten spielt weiche
+Impulse aus rosa Rauschen, auf beiden Kanälen gleich. Stimmen Laufzeit und
+Pegel, stehen sie als ein einziger Punkt zwischen den Boxen; stimmt etwas
+nicht, wandert oder verschmiert er. Die Impulse bringen beides mit, was man
+dafür braucht - einen Einschwinger für die Laufzeit und ein breites Band für
+den Pegel -, und zwischen ihnen ist Ruhe, damit man sie lange nebenher
+laufen lassen kann. Solange das Geräusch läuft, tritt die Musik zurück.
+
+Beim Ausschalten hört es nicht einfach auf: aus dem Rauschen treten Töne
+hervor, die über knapp drei Sekunden ausklingen und dabei aus der Mitte nach
+außen wandern, leicht gegeneinander schwebend. Der Knopf leuchtet nach,
+solange die Fahne steht. Danach kommt die Musik zurück.
 
 Oben rechts sitzen zwei Schalter: **EN/DE** stellt die Sprache um, **?**
 schaltet die Hilfetexte ein und aus, die beim Verweilen über einem
@@ -119,6 +133,8 @@ sich nur der Ladekreisel.
   Laufzeitunterschieds über ein Raster von Positionen.
 - `audio_check` - ein Impuls durch das fertige Plugin: Lage und Höhe in
   beiden Kanälen, auch mit den beiden Umgehungen.
+- `tone_demo datei.wav [sekunden]` - schreibt das Testgeräusch samt
+  Ausklang in eine WAV-Datei, die Ohrprobe ohne Host.
 - `ui_shot bild.png w=940 h=560 scale=2 lx=-2.9 ly=0.4 rx=2.7 ry=1.6 x=-2 y=3.4` -
   zeichnet die Oberfläche in eine PNG-Datei, ohne dass ein Fenster aufgeht.
   Das Bild oben stammt daher.

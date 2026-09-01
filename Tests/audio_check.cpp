@@ -207,6 +207,71 @@ int main()
         }
     }
 
+    // Testgeraeusch: waehrend es laeuft, steht es genau in der Mitte -
+    // beide Kanaele sind gleich. Beim Ausschalten klingt es aus und geht
+    // dabei ins Stereobild auseinander; nach gut drei Sekunden ist Ruhe.
+    {
+        HoerplatzProcessor proc;
+        setParam (proc, Params::bypassDelay, 1.0f);   // die Korrektur soll
+        setParam (proc, Params::bypassGain,  1.0f);   // hier nichts verschieben
+
+        const int block = 512;
+        proc.prepareToPlay (sr, block);
+        juce::AudioBuffer<float> buffer (2, block);
+        juce::MidiBuffer midi;
+
+        auto runFor = [&] (double seconds, double& peak, double& correlation)
+        {
+            double sumLL = 0.0, sumRR = 0.0, sumLR = 0.0;
+            peak = 0.0;
+
+            for (int done = 0; done < (int) (seconds * sr); done += block)
+            {
+                buffer.clear();
+                proc.processBlock (buffer, midi);
+
+                for (int i = 0; i < block; ++i)
+                {
+                    const double l = buffer.getSample (0, i);
+                    const double r = buffer.getSample (1, i);
+                    peak = std::max (peak, std::max (std::abs (l), std::abs (r)));
+                    sumLL += l * l; sumRR += r * r; sumLR += l * r;
+                }
+            }
+
+            const double denom = std::sqrt (sumLL * sumRR);
+            correlation = denom > 1.0e-12 ? sumLR / denom : 1.0;
+        };
+
+        double peak = 0.0, corr = 0.0;
+
+        // Aus: nichts zu hoeren.
+        runFor (0.5, peak, corr);
+        CHECK (peak < 1.0e-6);
+
+        // An: hoerbar, und beide Kanaele tragen dasselbe.
+        proc.testTone.setActive (true);
+        runFor (1.5, peak, corr);
+        CHECK (peak > 0.02 && peak < 0.5);
+        CHECK (corr > 0.9999);
+        std::printf ("Testgeraeusch an: Spitze %.3f, Gleichlauf %.4f\n", peak, corr);
+
+        // Aus: der Ausklang laeuft weiter und geht auseinander.
+        proc.testTone.setActive (false);
+        runFor (1.2, peak, corr);
+        CHECK (proc.testTone.isSounding());
+        CHECK (peak > 0.005);
+        // Deutlich auseinandergelaufen - das ist die Fahne.
+        CHECK (corr < 0.9);
+        std::printf ("Ausklang: Spitze %.3f, Gleichlauf %.4f\n", peak, corr);
+
+        // Und danach ist Ruhe.
+        runFor (2.5, peak, corr);
+        CHECK (! proc.testTone.isSounding());
+        runFor (0.5, peak, corr);
+        CHECK (peak < 1.0e-6);
+    }
+
     // Zahleneingabe: Komma wie Punkt, Einheit egal.
     {
         CHECK (std::abs (Params::parseNumber ("3.2")      - 3.2) < 1e-9);

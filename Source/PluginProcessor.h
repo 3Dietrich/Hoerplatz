@@ -4,6 +4,7 @@
 #include <juce_dsp/juce_dsp.h>
 
 #include "Geometry.h"
+#include "TestTone.h"
 #include "Params.h"
 
 class HoerplatzProcessor : public juce::AudioProcessor
@@ -37,6 +38,10 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
 
+    // Testgeraeusch zum Einrichten. Es wird vor der Korrektur eingespeist
+    // und laeuft deshalb durch dieselbe Kette wie die Musik.
+    TestTone testTone;
+
     // Rechnung ohne Audio - der Editor braucht die Werte auch dann, wenn
     // gerade kein Block laeuft (Transport gestoppt, Fenster offen).
     Geometry::Alignment currentAlignment() const;
@@ -54,6 +59,10 @@ private:
     juce::SmoothedValue<float> smoothDelayL, smoothDelayR, smoothGainL, smoothGainR;
 
     double sampleRate = 44100.0;
+
+    // Arbeitsspeicher fuer das Testgeraeusch, blockweise vorgehalten.
+    juce::AudioBuffer<float> testBuffer;
+    std::vector<float> testMix;
 
     std::atomic<float>* pLeftX = nullptr;
     std::atomic<float>* pLeftY = nullptr;

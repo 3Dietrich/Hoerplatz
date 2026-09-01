@@ -32,8 +32,8 @@ target_sources(Hoerplatz
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
         Source/Params.cpp
-    Source/Strings.cpp
         Source/Strings.cpp
+        Source/TestTone.cpp
         Source/UI/RoomComponent.cpp
         Source/UI/HeadSymbol.cpp)
 
@@ -71,6 +71,7 @@ target_sources(ui_shot PRIVATE
     Source/PluginEditor.cpp
     Source/Params.cpp
     Source/Strings.cpp
+    Source/TestTone.cpp
     Source/UI/RoomComponent.cpp
     Source/UI/HeadSymbol.cpp)
 target_compile_features(ui_shot PRIVATE cxx_std_17)
@@ -98,6 +99,7 @@ target_sources(audio_check PRIVATE
     Source/PluginEditor.cpp
     Source/Params.cpp
     Source/Strings.cpp
+    Source/TestTone.cpp
     Source/UI/RoomComponent.cpp
     Source/UI/HeadSymbol.cpp)
 target_compile_features(audio_check PRIVATE cxx_std_17)
@@ -117,3 +119,18 @@ target_link_libraries(audio_check PRIVATE
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags)
 add_test(NAME audio_check COMMAND audio_check)
+
+# Schreibt das Testgeraeusch in eine WAV-Datei - die Ohrprobe zum ui_shot.
+juce_add_console_app(tone_demo PRODUCT_NAME "tone_demo")
+target_sources(tone_demo PRIVATE
+    Tests/tone_demo.cpp
+    Source/TestTone.cpp)
+target_compile_features(tone_demo PRIVATE cxx_std_17)
+target_compile_definitions(tone_demo PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0)
+target_link_libraries(tone_demo PRIVATE
+    juce::juce_audio_formats
+    PUBLIC
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags)

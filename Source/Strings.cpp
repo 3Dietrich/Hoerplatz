@@ -17,6 +17,7 @@ namespace
         "Bypass Laufzeit",
         "Bypass Pegel",
         "Ausgleich",
+        "Testgeräusch",
 
         "Korrektur",
         "Laufzeit",
@@ -39,6 +40,7 @@ namespace
         "Lässt die Laufzeit unangetastet - zum Vergleichen.",
         "Lässt den Pegel unangetastet - zum Vergleichen.",
         "Wie weit der Pegelausgleich geht. 100 % ist die Rechnung fürs Freie, im Raum liegt es eher bei 20 bis 50 %.",
+        "Weiche Impulse in der Mitte. Stimmt die Einstellung, stehen sie als ein Punkt zwischen den Boxen. Beim Ausschalten klingt es in Stereo aus.",
         "Um wieviel die nähere Box verzögert und abgesenkt wird."
     };
 
@@ -57,6 +59,7 @@ namespace
         "Bypass delay",
         "Bypass level",
         "Amount",
+        "Test sound",
 
         "Correction",
         "Delay",
@@ -79,6 +82,7 @@ namespace
         "Leaves the delay untouched - for comparison.",
         "Leaves the level untouched - for comparison.",
         "How far the level correction goes. 100 % is the free-field maths, in a room it sits around 20 to 50 %.",
+        "Soft pulses in the centre. When the setting is right, they stand as one point between the speakers. Switching off, it fades out in stereo.",
         "How much the nearer speaker is delayed and turned down."
     };
 }

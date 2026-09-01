@@ -12,8 +12,12 @@ enum class Lang { de, en };
 // geht jeder Text durch diese Huelle, die ihn als UTF-8 uebergibt.
 struct Text
 {
-    const char* utf8;
+    // Kein Aggregat: der Konstruktor nimmt das Literal direkt entgegen, so
+    // bleiben die Tabellen unten ohne zusaetzliche Klammern lesbar.
+    Text (const char* t) : utf8 (t) {}
     operator juce::String() const { return juce::String::fromUTF8 (utf8); }
+
+    const char* utf8;
 };
 
 struct Texts
@@ -31,6 +35,7 @@ struct Texts
     Text bypassDelay;
     Text bypassGain;
     Text gainAmount;
+    Text testTone;
 
     Text correction;     // Ueberschrift des Zahlenfelds
     Text delayRow;
@@ -54,6 +59,7 @@ struct Texts
     Text helpBypassDelay;
     Text helpBypassGain;
     Text helpGainAmount;
+    Text helpTestTone;
     Text helpReadout;
 };
 

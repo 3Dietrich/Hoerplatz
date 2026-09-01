@@ -74,6 +74,11 @@ private:
 
     juce::Label areaLabel;
 
+    // Testgeraeusch zum Einrichten. Der Knopf leuchtet nach, solange der
+    // Ausklang laeuft.
+    juce::TextButton testToneButton;
+    bool tailWasSounding = false;
+
     juce::TextButton langButton, helpButton;
     std::unique_ptr<juce::TooltipWindow> tooltips;
 

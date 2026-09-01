@@ -56,6 +56,10 @@ void HoerplatzProcessor::prepareToPlay (double newSampleRate, int samplesPerBloc
         s->setCurrentAndTargetValue (1.0f);
     }
 
+    testTone.prepare (sampleRate);
+    testBuffer.setSize (2, samplesPerBlock);
+    testMix.assign ((size_t) samplesPerBlock, 0.0f);
+
     setLatencySamples ((int) baseDelaySamples);
 }
 
@@ -90,6 +94,28 @@ void HoerplatzProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
     auto* left  = buffer.getWritePointer (0);
     auto* right = buffer.getWritePointer (1);
+
+    // Testgeraeusch verdraengt das anliegende Signal, solange es klingt -
+    // beim Einrichten will man nur es hoeren, und sein Ausklang gehoert ihm
+    // allein. Danach kommt die Musik ueber eine kurze Rampe zurueck.
+    if (testBuffer.getNumSamples() < numSamples)
+    {
+        testBuffer.setSize (2, numSamples, false, false, true);
+        testMix.assign ((size_t) numSamples, 0.0f);
+    }
+
+    testTone.render (testBuffer.getWritePointer (0), testBuffer.getWritePointer (1),
+                     numSamples, testMix.data());
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        const float m = testMix[(size_t) i];
+        if (m <= 0.0f)
+            continue;
+
+        left[i]  = left[i]  * (1.0f - m) + testBuffer.getSample (0, i) * m;
+        right[i] = right[i] * (1.0f - m) + testBuffer.getSample (1, i) * m;
+    }
 
     for (int i = 0; i < numSamples; ++i)
     {
