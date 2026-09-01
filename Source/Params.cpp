@@ -68,13 +68,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout Params::createLayout()
     // kommt Diffusschall dazu: der Unterschied zwischen nah und fern faellt
     // dort viel kleiner aus, die volle Korrektur waere zu stark.
     //
-    // Die Vorgabe von 30 % ist kein Schaetzwert, sondern der am Hoerplatz
-    // eingestellte: bei Wegen von 0,9 m und 4,6 m rechnet 1/r -14,0 dB,
-    // gehoert richtig waren -4,2 dB. Das entspricht einem Hallradius von
-    // rund 1,2 m, wie ihn ein moebliertes Zimmer hat.
+    // Die Vorgabe steht auf der vollen Rechnung. Wieviel davon im eigenen
+    // Raum richtig ist, entscheidet das Ohr - in moeblierten Zimmern liegt
+    // der Punkt oft deutlich darunter, weil der Diffusschall den Unterschied
+    // zwischen nah und fern kleiner macht, als 1/r ihn rechnet.
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { gainAmount, 1 }, "Pegel-Ausgleich",
-        juce::NormalisableRange<float> { 0.0f, 200.0f, 1.0f }, 30.0f,
+        juce::NormalisableRange<float> { 0.0f, 200.0f, 1.0f }, 100.0f,
         juce::AudioParameterFloatAttributes{}
             .withStringFromValueFunction ([] (float v, int) { return juce::String ((int) v) + " %"; })
             .withValueFromStringFunction ([] (const juce::String& t) { return (float) Params::parseNumber (t); })));

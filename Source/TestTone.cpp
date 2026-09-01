@@ -14,7 +14,23 @@ namespace
     constexpr double fadeTau   = 1.05;      // Abklingen beim Verduennen
     constexpr double fadeMax   = 3.20;      // danach ist Ruhe
 
-    constexpr double tailDecay = 0.35;      // Abfall am Ende des Verduennens
+        constexpr double tailDecay = 0.055;     // Abfall am Ende des Verduennens:
+                                            // kurz genug, dass die Tropfen
+                                            // einzeln stehen bleiben
+
+    // Wieviel eigenes Rauschen die Seiten am Ende hoechstens bekommen. Ginge
+    // es bis eins, waere von der Ortung nichts mehr uebrig: der gemeinsame,
+    // im Bild verteilte Anteil verschwaende gerade dann, wenn es am
+    // breitesten sein soll - uebrig bliebe diffuses Rauschen, das im
+    // Kopfhoerer im Kopf steht statt aussen. Der eigene Anteil fuellt nur
+    // die Zwischenraeume.
+    constexpr double maxSides = 0.35;
+
+    constexpr double baseDelayMs = 1.6;     // Sockel der Verzoegerungsleitung
+    constexpr double maxItdMs    = 1.1;     // Versatz ganz aussen - mehr als
+                                            // zwischen zwei echten Ohren, das
+                                            // traegt im Kopfhoerer bis an den
+                                            // Rand und darueber hinaus
 
     float towards (float distance, float maxStep)
     {
@@ -65,9 +81,48 @@ float TestTone::Noise::next()
     return onePole (pink - lows, lowState, lowCoeff);
 }
 
+void TestTone::Ring::prepare (int size)
+{
+    data.assign ((size_t) std::max (4, size), 0.0f);
+    reset();
+}
+
+void TestTone::Ring::reset()
+{
+    std::fill (data.begin(), data.end(), 0.0f);
+    writePos = 0;
+}
+
+void TestTone::Ring::push (float v)
+{
+    data[(size_t) writePos] = v;
+    if (++writePos >= (int) data.size())
+        writePos = 0;
+}
+
+float TestTone::Ring::read (float delaySamples) const
+{
+    const int size = (int) data.size();
+    const float clamped = std::max (0.0f, std::min ((float) (size - 2), delaySamples));
+
+    const int whole = (int) clamped;
+    const float frac = clamped - (float) whole;
+
+    int index = writePos - 1 - whole;
+    while (index < 0) index += size;
+    int next = index - 1;
+    while (next < 0) next += size;
+
+    return data[(size_t) index] * (1.0f - frac) + data[(size_t) next] * frac;
+}
+
 void TestTone::prepare (double sampleRate)
 {
     sr = sampleRate;
+
+    baseDelaySamples = (float) (baseDelayMs * 0.001 * sr);
+    maxItdSamples    = (float) (maxItdMs    * 0.001 * sr);
+    sharedDelay.prepare ((int) (baseDelaySamples + maxItdSamples) + 8);
 
     const float hp = coeffFor (120.0, sr);
     const float lp = coeffFor (12000.0, sr);
@@ -89,6 +144,8 @@ void TestTone::reset()
     pulsePhase = 0.0;
     fadeTime = 0.0;
     tailLpL = tailLpR = 0.0f;
+    pulsePan = 0.0f;
+    sharedDelay.reset();
 
     common.reset();
     leftOnly.reset();
@@ -164,12 +221,25 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
             // Beim Verduennen ruecken die Impulse zusammen und laufen mit
             // ihrem laengeren Abfall ineinander - aus einzelnen Schlaegen
             // wird eine Wolke.
-            const double period = fading ? pulsePeriod - (pulsePeriod - 0.20)
+            // Beim Verduennen ruecken die Impulse zusammen. Sie bleiben aber
+            // deutlich kuerzer als ihr Abstand - ueberlappen sie, mittelt
+            // sich ihre Streuung wieder zur Mitte und alles klingt nur noch
+            // diffus.
+            const double period = fading ? pulsePeriod - (pulsePeriod - 0.13)
                                            * std::min (1.0, fadeTime / widenTime)
                                          : pulsePeriod;
             pulsePhase += dt;
             if (pulsePhase >= period)
+            {
                 pulsePhase -= period;
+
+                // Jeder Impuls sucht sich beim Verduennen eine eigene Stelle
+                // im Bild. Im Betrieb bleibt er in der Mitte, dort soll ja
+                // nichts wandern.
+                panState = panState * 1664525u + 1013904223u;
+                const float roll = (float) ((int) (panState >> 8) - 8388608) / 8388608.0f;
+                pulsePan = fading ? roll : 0.0f;
+            }
 
             // Senkrechte Flanke, dann exponentiell zurueck. Die Flanke ist
             // das eigentliche Werkzeug: an ihr haengt, ob man einen
@@ -181,11 +251,24 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
             // Von der Mitte in die Breite: der gemeinsame Anteil weicht
             // zwei eigenen. Ueber Sinus und Kosinus gemischt, damit die
             // Lautstaerke dabei gleich bleibt.
-            const double angle = width * M_PI * 0.5;
+            const double angle = width * std::asin (maxSides);
             const float centre = (float) std::cos (angle);
             const float sides  = (float) std::sin (angle);
 
-            const float shared = common.next();
+            sharedDelay.push (common.next());
+
+            // Der Ort des Impulses: Laufzeit zuerst, Pegel dazu. Die
+            // Laufzeit traegt die Ortung - ein Pegelunterschied allein
+            // klingt im Kopfhoerer nur diffus, nicht weit.
+            const float pan = pulsePan * (float) width;
+            const float itd = pan * maxItdSamples * 0.5f;
+            const float sharedL = sharedDelay.read (baseDelaySamples + itd);
+            const float sharedR = sharedDelay.read (baseDelaySamples - itd);
+
+            const double panAngle = (pan + 1.0) * M_PI * 0.25;
+            const float panL = (float) (std::cos (panAngle) * M_SQRT2);
+            const float panR = (float) (std::sin (panAngle) * M_SQRT2);
+
             const float ownL = leftOnly.next();
             const float ownR = rightOnly.next();
 
@@ -195,8 +278,8 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
             // Rueckgang besorgt allein das Abklingen.
             const double density = std::sqrt ((period / pulsePeriod) * (pulseDecay / decay));
             const float gain = env * pulseLevel * (float) (level * density);
-            sampleL = (shared * centre + ownL * sides) * gain;
-            sampleR = (shared * centre + ownR * sides) * gain;
+            sampleL = (sharedL * centre * panL + ownL * sides) * gain;
+            sampleR = (sharedR * centre * panR + ownR * sides) * gain;
 
             if (fading)
             {

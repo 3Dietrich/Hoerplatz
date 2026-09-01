@@ -221,16 +221,31 @@ int main()
         juce::MidiBuffer midi;
 
         double rms = 0.0;
+        double maxBalanceDb = 0.0;   // groesste Auslenkung nach einer Seite
         auto runFor = [&] (double seconds, double& peak, double& correlation)
         {
             double sumLL = 0.0, sumRR = 0.0, sumLR = 0.0;
             int counted = 0;
             peak = 0.0;
+            maxBalanceDb = 0.0;
 
             for (int done = 0; done < (int) (seconds * sr); done += block)
             {
                 buffer.clear();
                 proc.processBlock (buffer, midi);
+
+                // Balance des einzelnen Blocks: bei einem Geraeusch, das
+                // ueber die Breite verstreut aufblitzt, schwankt sie stark;
+                // bei blossem diffusem Rauschen bleibt sie nahe null.
+                double blockLL = 0.0, blockRR = 0.0;
+                for (int i = 0; i < block; ++i)
+                {
+                    blockLL += buffer.getSample (0, i) * buffer.getSample (0, i);
+                    blockRR += buffer.getSample (1, i) * buffer.getSample (1, i);
+                }
+                if (blockLL > 1.0e-9 && blockRR > 1.0e-9)
+                    maxBalanceDb = std::max (maxBalanceDb,
+                                             std::abs (10.0 * std::log10 (blockLL / blockRR)));
 
                 for (int i = 0; i < block; ++i)
                 {
@@ -259,8 +274,9 @@ int main()
         runFor (1.5, peak, corr);
         CHECK (peak > 0.02 && peak < 0.8);
         CHECK (corr > 0.9999);
-        std::printf ("Testgeraeusch an: Spitze %.3f, Mittelwert %.1f dB, Gleichlauf %.4f\n",
-                     peak, 20.0 * std::log10 (rms), corr);
+        CHECK (maxBalanceDb < 0.01);   // im Betrieb steht es fest in der Mitte
+        std::printf ("Testgeraeusch an: Spitze %.3f, Mittelwert %.1f dB, Gleichlauf %.4f, Balance bis %.2f dB\n",
+                     peak, 20.0 * std::log10 (rms), corr, maxBalanceDb);
 
         // Aus: der Uebergang laeuft noch aus der Mitte heraus.
         proc.testTone.setActive (false);
@@ -271,9 +287,15 @@ int main()
         // Und danach steht die Fahne - beide Seiten weitgehend unabhaengig.
         runFor (1.2, peak, corr);
         CHECK (peak > 0.005);
-        CHECK (corr < 0.3);
-        std::printf ("Ausklang: Spitze %.3f, Mittelwert %.1f dB, Gleichlauf %.4f\n",
-                     peak, 20.0 * std::log10 (rms), corr);
+        // Die Ortung steckt in der Balance, nicht im Gleichlauf: beide
+        // Seiten tragen dasselbe Rauschen, nur zeitversetzt und verschieden
+        // laut. Der Gleichlauf darf dabei ruhig hoch bleiben.
+        CHECK (corr < 0.95);
+        // Die Impulse blitzen ueber die ganze Breite auf, nicht nur diffus
+        // in der Mitte.
+        CHECK (maxBalanceDb > 6.0);
+        std::printf ("Ausklang: Spitze %.3f, Mittelwert %.1f dB, Gleichlauf %.4f, Balance bis %.1f dB\n",
+                     peak, 20.0 * std::log10 (rms), corr, maxBalanceDb);
 
         // Und danach ist Ruhe.
         runFor (2.5, peak, corr);

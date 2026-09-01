@@ -34,7 +34,7 @@ Mittelsenkrechte zwischen den Boxen - überall darauf hörst du symmetrisch.
 | Bypass Laufzeit | lässt die Verzögerung unangetastet |
 | Bypass Pegel | lässt die Lautstärke unangetastet |
 | Testgeräusch | scharfe Impulse zum Einrichten; verdünnt sich beim Ausschalten ins Stereobild |
-| Ausgleich | wie weit die Pegelkorrektur geht; 100 % = `1/r`, Vorgabe 30 % |
+| Ausgleich | wie weit die Pegelkorrektur geht; 100 % = `1/r` |
 
 Die beiden Bypass-Schalter sind zum Vergleichen da: einmal mit, einmal ohne.
 Der Unterschied ist deutlicher, als man erwartet.
