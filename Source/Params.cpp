@@ -36,6 +36,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout Params::createLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
+    // Zieht beide Boxen um ihre gemeinsame Mitte auf diesen Abstand und
+    // folgt umgekehrt, wenn eine Box verschoben wird.
+    layout.add (makeFloat (speakerDistance, "Boxenabstand", 0.30f, 24.0f, 5.50f));
+
     // Standardaufstellung: 5,50 m auseinander, 35 cm vor der vorderen Wand.
     layout.add (makeFloat (leftX,  "Box links seitlich",  -12.0f, 12.0f, -2.75f));
     layout.add (makeFloat (leftY,  "Box links Abstand",    -1.0f, 20.0f,  0.35f));

@@ -18,6 +18,11 @@ public:
 
     void setLang (Lang l) { lang = l; }
 
+    // Holt die Uebersteuerungsmeldungen des Prozessors ab. Die betroffene
+    // Box leuchtet danach kurz auf - der Pegelausgleich hebt eine Seite an,
+    // und wenn das zu weit geht, soll man sehen, welche.
+    void pollClipping();
+
     void paint (juce::Graphics&) override;
     void mouseMove (const juce::MouseEvent&) override;
     void mouseExit (const juce::MouseEvent&) override;
@@ -47,10 +52,12 @@ private:
     Handle handleAt (juce::Point<float> screenPos) const;
     void dragTo (juce::Point<float> screenPos);
     void drawSpeaker (juce::Graphics&, juce::Point<float> pos, float angleToListener,
-                      float sizePx, bool highlighted) const;
+                      float sizePx, bool highlighted, float clipGlow) const;
 
     HoerplatzProcessor& processor;
     Lang lang = Lang::de;
+
+    double clipTime[2] { -100.0, -100.0 };   // wann zuletzt uebersteuert wurde
 
     Handle grabbed = Handle::none;
     Handle hovered = Handle::none;

@@ -11,6 +11,12 @@
 // nachbauen, auch wenn sie nicht symmetrisch ist.
 namespace Params
 {
+    // Der Boxenabstand ist ein eigener Parameter, obwohl die Standorte der
+    // Boxen ihn schon enthalten: so laesst er sich automatisieren und vom
+    // Host aus bedienen. Beide Seiten werden gegenseitig nachgefuehrt -
+    // siehe HoerplatzProcessor::handleAsyncUpdate.
+    inline constexpr const char* speakerDistance = "spkDist";
+
     inline constexpr const char* leftX      = "spkLx";
     inline constexpr const char* leftY      = "spkLy";
     inline constexpr const char* rightX     = "spkRx";

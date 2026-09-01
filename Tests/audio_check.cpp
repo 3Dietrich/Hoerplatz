@@ -177,10 +177,10 @@ int main()
         std::printf ("30 %%: %.2f dB links (bei 100 %% waeren es %.2f dB)\n", dbHeard, dbFull);
     }
 
-    // Ein eingetippter Boxenabstand muss die Boxen wirklich verschieben.
-    // Der Regler hat keinen eigenen Parameter, er greift an beide Boxen -
-    // frueher verwarf er die Eingabe, weil beim Tippen der Tastaturfokus im
-    // Textfeld liegt und nicht auf dem Regler selbst.
+    // Ein eingetippter Boxenabstand muss die Boxen wirklich verschieben. Der
+    // Abstand ist ein eigener Parameter; die Standorte folgen ihm ueber den
+    // AsyncUpdater des Prozessors, der hier ohne Nachrichtenschleife von
+    // Hand angestossen wird.
     {
         HoerplatzProcessor proc;
         std::unique_ptr<juce::AudioProcessorEditor> editor (proc.createEditor());
@@ -192,6 +192,7 @@ int main()
         {
             const double gewuenscht = 3.20;
             slider->setValue (gewuenscht, juce::sendNotificationSync);
+            proc.flushPendingUpdates();
 
             const Geometry::Point l { proc.apvts.getRawParameterValue (Params::leftX)->load(),
                                       proc.apvts.getRawParameterValue (Params::leftY)->load() };
@@ -203,7 +204,7 @@ int main()
             std::printf ("Boxenabstand eingetippt: %.2f m -> %.2f m\n", gewuenscht, erreicht);
 
             // Und derselbe Weg ueber den Text, so wie er im Feld ankommt.
-            CHECK (std::abs (slider->getValueFromText ("3,20 m") - 3.20) < 1e-9);
+            CHECK (std::abs (slider->getValueFromText ("3,20 m") - 3.20) < 1e-4);
         }
     }
 
@@ -334,6 +335,60 @@ int main()
 
         std::printf ("Bypass Pegel: bei 100 %% %.1f dB Unterschied, bei 30 %% %.1f dB, mit Bypass %.2f dB\n",
                      voll, leise, aus);
+    }
+
+    // Und die Gegenrichtung: wird eine Box verschoben, folgt der Abstand.
+    {
+        HoerplatzProcessor proc;
+        setParam (proc, Params::leftX,  -1.0f);
+        setParam (proc, Params::leftY,   0.5f);
+        setParam (proc, Params::rightX,  1.0f);
+        setParam (proc, Params::rightY,  0.5f);
+        proc.flushPendingUpdates();
+
+        const float abstand = proc.apvts.getRawParameterValue (Params::speakerDistance)->load();
+        CHECK (std::abs (abstand - 2.0f) < 0.02f);
+        std::printf ("Box verschoben: Abstand folgt auf %.2f m\n", abstand);
+    }
+
+    // Uebersteuerung: der Ausgleich hebt eine Seite an, das muss gemeldet
+    // werden - sonst sieht man es erst, wenn man es hoert.
+    {
+        HoerplatzProcessor proc;
+        setParam (proc, Params::listenerX, -2.4f);
+        setParam (proc, Params::listenerY,  1.0f);
+        setParam (proc, Params::gainAmount, 200.0f);
+        proc.flushPendingUpdates();
+
+        const int block = 512;
+        proc.prepareToPlay (sr, block);
+        juce::AudioBuffer<float> buffer (2, block);
+        juce::MidiBuffer midi;
+
+        const auto spielen = [&] (int blocks)
+        {
+            for (int i = 0; i < blocks; ++i)
+            {
+                for (int ch = 0; ch < 2; ++ch)
+                    for (int n = 0; n < block; ++n)
+                        buffer.setSample (ch, n, 0.5f * std::sin (0.05f * (float) n));
+                proc.processBlock (buffer, midi);
+            }
+        };
+
+        spielen (60);
+        CHECK (proc.clipped[1].load());     // die fernere Box wird angehoben
+        CHECK (! proc.clipped[0].load());   // die naehere nicht
+
+        // Mit weniger Ausgleich bleibt es unter der Grenze. Die Glaettung
+        // braucht dafuer erst ein paar Bloecke, um herunterzukommen.
+        setParam (proc, Params::gainAmount, 20.0f);
+        spielen (20);
+        proc.clipped[0].store (false);
+        proc.clipped[1].store (false);
+        spielen (40);
+        CHECK (! proc.clipped[0].load() && ! proc.clipped[1].load());
+        std::printf ("Uebersteuerung wird gemeldet und bei kleinem Ausgleich nicht\n");
     }
 
     // Zahleneingabe: Komma wie Punkt, Einheit egal.

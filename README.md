@@ -28,7 +28,7 @@ Mittelsenkrechte zwischen den Boxen - überall darauf hörst du symmetrisch.
 
 | | |
 |---|---|
-| Boxenabstand | zieht beide Boxen um ihre gemeinsame Mitte auseinander |
+| Boxenabstand | zieht beide Boxen um ihre gemeinsame Mitte auseinander; folgt umgekehrt, wenn eine Box verschoben wird |
 | Raumbreite, Raumtiefe | dein Raum; die Fläche steht darunter |
 | Hörplatz seitlich, Abstand | dein Platz, gemessen von der Mitte der vorderen Wand |
 | Bypass Laufzeit | lässt die Verzögerung unangetastet |
@@ -96,7 +96,9 @@ die Ortung ist der erste Schall entscheidend, alles danach kommt zu spät.
   halbe Spanne herauf. Das Produkt beider Faktoren bleibt 1, die
   Gesamtlautstärke ändert sich also nicht, wenn der Hörplatz wandert. Der
   Preis dafür ist Headroom: ein Kanal wird angehoben, bei großen Werten um
-  einige Dezibel.
+  einige Dezibel. Übersteuert er dabei, färbt sich die betroffene Box im
+  Grundriss und klingt langsam zurück - so sieht man auch den kurzen
+  Ausschlag, den man sonst verpasst.
 - **Ausgleich:** das `1/r` gilt im Freien. In einem Raum kommt Diffusschall
   dazu, der Pegel fällt flacher ab als 6 dB pro Abstandsverdopplung - die
   volle Korrektur ist dann zu viel und die Mitte kippt zur ferneren Box.
@@ -143,6 +145,17 @@ ad-hoc. Kopiert man stattdessen über ein schon installiertes Bundle, bleibt
 ein `_CodeSignature` zurück, das nicht mehr zum Inhalt passt - macOS schießt
 den ladenden Host dann mit „Code Signature Invalid" ab, und im Host dreht
 sich nur der Ladekreisel.
+
+## Wo es erprobt ist
+
+Gebaut und benutzt wird es auf **macOS als Audio Unit, in Audio Hijack**.
+Genau das ist geprüft, samt `auval`. VST3 und Standalone entstehen beim Bauen
+mit, sind aber in keinem Host ausprobiert worden, und Windows oder Linux
+standen nie zur Debatte.
+
+Die Audio Unit ist **ad-hoc signiert**. Auf dem eigenen Rechner reicht das;
+auf einem fremden blockt Gatekeeper, dafür bräuchte es eine Developer-ID und
+Notarisierung.
 
 ## Prüfungen
 

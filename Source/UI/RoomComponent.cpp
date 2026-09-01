@@ -97,8 +97,18 @@ RoomComponent::Handle RoomComponent::handleAt (juce::Point<float> screenPos) con
     return best;
 }
 
+void RoomComponent::pollClipping()
+{
+    const double now = juce::Time::getMillisecondCounterHiRes() * 0.001;
+
+    for (int ch = 0; ch < 2; ++ch)
+        if (processor.clipped[ch].exchange (false))
+            clipTime[ch] = now;
+}
+
 void RoomComponent::drawSpeaker (juce::Graphics& g, juce::Point<float> pos,
-                                 float angleToListener, float sizePx, bool highlighted) const
+                                 float angleToListener, float sizePx, bool highlighted,
+                                 float clipGlow) const
 {
     // Lokale Zeichnung: Schallrichtung entlang +y (nach unten), hinten
     // schmal, vorne breit - die Box von oben. Die Drehung richtet sie auf
@@ -115,15 +125,20 @@ void RoomComponent::drawSpeaker (juce::Graphics& g, juce::Point<float> pos,
 
     auto t = juce::AffineTransform::rotation (angleToListener).translated (pos);
 
-    g.setColour (Theme::amber.withAlpha (highlighted ? 0.30f : 0.16f));
+    // Uebersteuert diese Seite, faerbt sich die Box und klingt langsam
+    // zurueck - so sieht man auch den kurzen Ausschlag, den man sonst
+    // verpasst.
+    const auto colour = Theme::amber.interpolatedWith (Theme::pink, clipGlow);
+
+    g.setColour (colour.withAlpha (juce::jmax (highlighted ? 0.30f : 0.16f, clipGlow * 0.45f)));
     g.fillPath (box, t);
-    g.setColour (Theme::amber.withAlpha (highlighted ? 1.0f : 0.85f));
-    g.strokePath (box, juce::PathStrokeType (highlighted ? 1.8f : 1.4f), t);
+    g.setColour (colour.withAlpha (juce::jmax (highlighted ? 1.0f : 0.85f, clipGlow)));
+    g.strokePath (box, juce::PathStrokeType (highlighted || clipGlow > 0.05f ? 1.8f : 1.4f), t);
 
     // Chassis als kleiner Kreis auf der Schallwand.
     juce::Path chassis;
     chassis.addEllipse (-w * 0.16f, d * 0.16f, w * 0.32f, w * 0.32f);
-    g.setColour (Theme::amber.withAlpha (0.55f));
+    g.setColour (colour.withAlpha (0.55f));
     g.strokePath (chassis, juce::PathStrokeType (1.0f), t);
 }
 
@@ -207,10 +222,18 @@ void RoomComponent::paint (juce::Graphics& g)
     // falsch.
     const float spkSize = std::max (10.0f, 0.30f * v.scale);
     const auto activeHandle = (grabbed != Handle::none ? grabbed : hovered);
+
+    // Nachleuchten der Uebersteuerung: eine Sekunde lang, dann ist es weg.
+    const double now = juce::Time::getMillisecondCounterHiRes() * 0.001;
+    const auto glow = [&] (int channel)
+    {
+        return (float) juce::jlimit (0.0, 1.0, 1.0 - (now - clipTime[channel]) / 1.0);
+    };
+
     drawSpeaker (g, lPos, std::atan2 (- (hPos.x - lPos.x), hPos.y - lPos.y), spkSize,
-                 activeHandle == Handle::leftSpeaker);
+                 activeHandle == Handle::leftSpeaker, glow (0));
     drawSpeaker (g, rPos, std::atan2 (- (hPos.x - rPos.x), hPos.y - rPos.y), spkSize,
-                 activeHandle == Handle::rightSpeaker);
+                 activeHandle == Handle::rightSpeaker, glow (1));
 
     // Hoerplatz: Fadenkreuz plus Kopf von oben in der besten Mittenstellung.
     const float headR = std::max (6.0f, 0.0875f * v.scale);

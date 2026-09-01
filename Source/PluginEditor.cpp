@@ -121,36 +121,11 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     addAndMakeVisible (room);
     addAndMakeVisible (readout);
 
-    // Boxenabstand: kein eigener Parameter, sondern ein Griff an beide Boxen.
-    styleSlider (speakerDistance.slider, true);
-    speakerDistance.slider.setRange (0.30, 24.0, 0.01);
-    speakerDistance.slider.textFromValueFunction = [] (double v) { return juce::String (v, 2) + " m"; };
-    speakerDistance.slider.valueFromTextFunction = [] (const juce::String& s) { return Params::parseNumber (s); };
+    setUpRow (speakerDistance, Params::speakerDistance, true);
 
-    // Jede Aenderung hier kommt vom Benutzer - ob aus dem Textfeld, von der
-    // Maus oder von den Pfeiltasten. Der Abgleich mit den Boxpositionen im
-    // Timer laeuft ohne Benachrichtigung und loest deshalb nichts aus.
-    speakerDistance.slider.onValueChange = [this]
-    {
-        setSpeakerDistance ((float) speakerDistance.slider.getValue());
-    };
-    speakerDistance.slider.onDragStart = [this]
-    {
-        for (auto* id : { Params::leftX, Params::leftY, Params::rightX, Params::rightY })
-            if (auto* prm = plugin.apvts.getParameter (id)) prm->beginChangeGesture();
-    };
-    speakerDistance.slider.onDragEnd = [this]
-    {
-        for (auto* id : { Params::leftX, Params::leftY, Params::rightX, Params::rightY })
-            if (auto* prm = plugin.apvts.getParameter (id)) prm->endChangeGesture();
-    };
     // Kennung, damit die Pruefung den Regler findet, ohne die Reihenfolge
     // der Kindkomponenten zu erraten.
     speakerDistance.slider.setComponentID ("speakerDistance");
-    speakerDistance.label.setFont (juce::Font (juce::FontOptions (12.0f)));
-    speakerDistance.label.setColour (juce::Label::textColourId, Theme::textDim);
-    addAndMakeVisible (speakerDistance.label);
-    addAndMakeVisible (speakerDistance.slider);
 
     setUpRow (roomWidth, Params::roomWidth, false);
     setUpRow (roomDepth, Params::roomDepth, false);
@@ -229,7 +204,6 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     applyLanguage();
     applyHelp();
     updateArea();
-    updateSpeakerDistanceSlider();
 
     setSize (940, 560);
     setResizable (true, true);
@@ -332,58 +306,6 @@ void HoerplatzEditor::updateArea()
     const float d = plugin.apvts.getRawParameterValue (Params::roomDepth)->load();
     areaLabel.setText (juce::String (t.area) + "  " + juce::String (w * d, 1)
                        + juce::String::fromUTF8 (" m²"), juce::dontSendNotification);
-}
-
-void HoerplatzEditor::updateSpeakerDistanceSlider()
-{
-    // Waehrend jemand den Wert eintippt oder zieht, bleibt die Anzeige in
-    // seiner Hand - sonst schriebe der Abgleich ihm in den Text hinein.
-    if (speakerDistance.slider.isMouseButtonDown() || speakerDistance.slider.hasKeyboardFocus (true))
-        return;
-
-    const Geometry::Point l { plugin.apvts.getRawParameterValue (Params::leftX)->load(),
-                              plugin.apvts.getRawParameterValue (Params::leftY)->load() };
-    const Geometry::Point r { plugin.apvts.getRawParameterValue (Params::rightX)->load(),
-                              plugin.apvts.getRawParameterValue (Params::rightY)->load() };
-
-    speakerDistance.slider.setValue (Geometry::speakerDistance (l, r), juce::dontSendNotification);
-}
-
-void HoerplatzEditor::setSpeakerDistance (float metres)
-{
-    auto get = [this] (const char* id) { return plugin.apvts.getRawParameterValue (id)->load(); };
-    auto set = [this] (const char* id, float v)
-    {
-        if (auto* prm = plugin.apvts.getParameter (id))
-            prm->setValueNotifyingHost (prm->convertTo0to1 (v));
-    };
-
-    const juce::Point<float> l { get (Params::leftX),  get (Params::leftY) };
-    const juce::Point<float> r { get (Params::rightX), get (Params::rightY) };
-
-    const auto centre = (l + r) * 0.5f;
-    auto direction = r - l;
-    const float length = direction.getDistanceFromOrigin();
-
-    // Stehen beide Boxen aufeinander, gibt es keine Richtung, an der sich
-    // das Auseinanderziehen orientieren koennte - dann waagerecht.
-    direction = (length > 0.001f ? direction / length : juce::Point<float> { 1.0f, 0.0f });
-
-    const float W = get (Params::roomWidth);
-    const float D = get (Params::roomDepth);
-    auto clampToRoom = [&] (juce::Point<float> p)
-    {
-        return juce::Point<float> { juce::jlimit (-0.5f * W + 0.10f, 0.5f * W - 0.10f, p.x),
-                                    juce::jlimit (0.10f, D - 0.10f, p.y) };
-    };
-
-    const auto newL = clampToRoom (centre - direction * (metres * 0.5f));
-    const auto newR = clampToRoom (centre + direction * (metres * 0.5f));
-
-    set (Params::leftX,  newL.x);
-    set (Params::leftY,  newL.y);
-    set (Params::rightX, newR.x);
-    set (Params::rightY, newR.y);
 }
 
 void HoerplatzEditor::paint (juce::Graphics& g)
@@ -548,7 +470,7 @@ void HoerplatzEditor::timerCallback()
     }
 
     updateArea();
-    updateSpeakerDistanceSlider();
+    room.pollClipping();
     room.repaint();
     readout.repaint();
 }

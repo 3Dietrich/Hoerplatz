@@ -37,8 +37,6 @@ private:
     void applyLanguage();
     void applyHelp();
     void updateArea();
-    void updateSpeakerDistanceSlider();
-    void setSpeakerDistance (float metres);
 
     // Ein Regler mit Beschriftung darueber - kompakt, damit rechts genug
     // Platz fuer alle bleibt.
@@ -61,11 +59,7 @@ private:
     RoomComponent room;
     ReadoutPanel readout;
 
-    // Der Boxenabstand hat keinen eigenen Parameter - die beiden Boxen
-    // stehen einzeln im Raum. Der Regler zieht sie um ihre gemeinsame Mitte
-    // auseinander und zeigt an, wie weit sie gerade auseinanderstehen.
-    Row speakerDistance;
-    Row roomWidth, roomDepth, listenerX, listenerY;
+    Row speakerDistance, roomWidth, roomDepth, listenerX, listenerY;
 
     juce::ToggleButton bypassDelay, bypassGain;
 
