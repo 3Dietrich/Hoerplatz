@@ -65,9 +65,16 @@ die Ortung ist der erste Schall entscheidend, alles danach kommt zu spät.
   dazu, der Pegel fällt flacher ab als 6 dB pro Abstandsverdopplung - die
   volle Korrektur ist dann zu viel und die Mitte kippt zur ferneren Box.
   Der Regler skaliert deshalb den Dezibelwert: `(d/dmax)^n` mit n zwischen 0
-  und 2. 100 % ist die Rechnung fürs Freie, in möblierten Räumen sitzt der
-  Punkt nach Gehör oft darunter, und über 100 % lässt sich die Mitte
-  bewusst überziehen.
+  und 2.
+
+  Wie groß der Unterschied ist, zeigt ein Platz dicht an der linken Box:
+  Wege von 0,9 m und 4,6 m, Verhältnis 5:1. `1/r` verlangt dafür -14,0 dB.
+  Gehört richtig waren -4,2 dB, also 30 % - und das ist keine Geschmacks-
+  sache, sondern der Diffusschall: rechnet man mit Direkt- **und**
+  Diffusanteil, entspricht dieser Wert einem Hallradius von rund 1,2 m, wie
+  ihn ein normal möbliertes Zimmer hat. Deshalb steht die Vorgabe auf 30 %
+  und nicht auf der reinen Lehre. Über 100 % lässt sich die Mitte bewusst
+  überziehen.
 
 Der Laufzeitunterschied kann nie größer werden als der Boxenabstand geteilt
 durch die Schallgeschwindigkeit - bei 12 m Abstand sind das 35 ms.

@@ -38,7 +38,7 @@ namespace
         "Abstand des Hörplatzes zur Boxenebene.",
         "Lässt die Laufzeit unangetastet - zum Vergleichen.",
         "Lässt den Pegel unangetastet - zum Vergleichen.",
-        "Wie weit der Pegelausgleich geht. 100 % ist die Rechnung fürs Freie; im Raum klingt weniger oft richtiger.",
+        "Wie weit der Pegelausgleich geht. 100 % ist die Rechnung fürs Freie, im Raum liegt es eher bei 20 bis 50 %.",
         "Um wieviel die nähere Box verzögert und abgesenkt wird."
     };
 
@@ -78,7 +78,7 @@ namespace
         "Distance from the seat to the speaker line.",
         "Leaves the delay untouched - for comparison.",
         "Leaves the level untouched - for comparison.",
-        "How far the level correction goes. 100 % is the free-field maths; in a room, less often sounds right.",
+        "How far the level correction goes. 100 % is the free-field maths, in a room it sits around 20 to 50 %.",
         "How much the nearer speaker is delayed and turned down."
     };
 }

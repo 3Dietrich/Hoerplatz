@@ -176,9 +176,9 @@ void RoomComponent::paint (juce::Graphics& g)
 
         const juce::Point<float> mid { (lPos.x + rPos.x) * 0.5f, (lPos.y + rPos.y) * 0.5f };
         g.setColour (Theme::textDim);
-        g.setFont (juce::FontOptions (11.0f));
+        g.setFont (juce::FontOptions (Theme::smallText));
         g.drawText (metreText (Geometry::speakerDistance (left, right)),
-                    juce::Rectangle<float> (mid.x - 40.0f, mid.y - 16.0f, 80.0f, 13.0f),
+                    juce::Rectangle<float> (mid.x - 44.0f, mid.y - 18.0f, 88.0f, 16.0f),
                     juce::Justification::centred);
     }
 
@@ -196,8 +196,8 @@ void RoomComponent::paint (juce::Graphics& g)
 
         const auto mid = from + (hPos - from) * 0.55f;
         g.setColour (Theme::textDim.withAlpha (isFar ? 0.95f : 0.6f));
-        g.setFont (juce::FontOptions (juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain));
-        g.drawText (metreText (dist), juce::Rectangle<float> (mid.x - 34.0f, mid.y - 14.0f, 68.0f, 13.0f),
+        g.setFont (juce::FontOptions (juce::Font::getDefaultMonospacedFontName(), Theme::smallText, juce::Font::plain));
+        g.drawText (metreText (dist), juce::Rectangle<float> (mid.x - 38.0f, mid.y - 16.0f, 76.0f, 16.0f),
                     juce::Justification::centred);
     }
 

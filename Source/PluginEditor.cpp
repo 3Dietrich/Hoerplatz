@@ -168,7 +168,7 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     gainAmountAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
         plugin.apvts, Params::gainAmount, gainAmountKnob);
 
-    gainAmountLabel.setFont (juce::Font (juce::FontOptions (11.0f)));
+    gainAmountLabel.setFont (juce::Font (juce::FontOptions (Theme::smallText)));
     gainAmountLabel.setColour (juce::Label::textColourId, Theme::textDim);
     gainAmountLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (gainAmountLabel);
@@ -406,7 +406,7 @@ void HoerplatzEditor::resized()
     side.removeFromTop (4);
     auto bypassArea = side.removeFromTop (78);
     auto knobArea = bypassArea.removeFromRight (78);
-    gainAmountLabel.setBounds (knobArea.removeFromTop (13));
+    gainAmountLabel.setBounds (knobArea.removeFromTop (16));
     gainAmountKnob.setBounds (knobArea);
 
     // Die beiden Schalter stehen mittig zum Knopf daneben.

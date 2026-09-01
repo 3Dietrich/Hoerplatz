@@ -17,4 +17,8 @@ namespace Theme
     inline const juce::Colour pink     { 0xffef5fa6 };
 
     inline constexpr float corner = 3.0f;
+
+    // Kleinste Schriftgroesse der Oberflaeche - Massband, Weglaengen,
+    // Beschriftung des Knopfes.
+    inline constexpr float smallText = 13.75f;
 }
