@@ -33,7 +33,7 @@ Mittelsenkrechte zwischen den Boxen - überall darauf hörst du symmetrisch.
 | Hörplatz seitlich, Abstand | dein Platz, gemessen von der Mitte der vorderen Wand |
 | Bypass Laufzeit | lässt die Verzögerung unangetastet |
 | Bypass Pegel | lässt die Lautstärke unangetastet |
-| Ausgleich | wie weit die Pegelkorrektur geht; 100 % ist der Normalfall im Raum |
+| Ausgleich | wie weit die Pegelkorrektur geht; 100 % = `1/r`, Vorgabe 30 % |
 
 Die beiden Bypass-Schalter sind zum Vergleichen da: einmal mit, einmal ohne.
 Der Unterschied ist deutlicher, als man erwartet.
@@ -58,9 +58,13 @@ die Ortung ist der erste Schall entscheidend, alles danach kommt zu spät.
 - **Verzögerung:** die nähere Box wartet, bis die weitere eingeholt hat,
   also `(dmax - d) / 343 m/s`. Verzögert wird immer nur - Schall vorziehen
   kann niemand.
-- **Pegel:** der Schalldruck fällt mit `1/r`, die nähere Box wird also im
-  Verhältnis der Weglängen abgesenkt (`d / dmax`). Der lautere Kanal bleibt
-  bei 0 dB, übersteuern kann dabei nichts.
+- **Pegel:** der Schalldruck fällt mit `1/r`, die nähere Box muss also im
+  Verhältnis der Weglängen leiser sein. Verteilt wird das auf beide Seiten -
+  die nähere geht um die halbe Spanne herunter, die fernere um dieselbe
+  halbe Spanne herauf. Das Produkt beider Faktoren bleibt 1, die
+  Gesamtlautstärke ändert sich also nicht, wenn der Hörplatz wandert. Der
+  Preis dafür ist Headroom: ein Kanal wird angehoben, bei großen Werten um
+  einige Dezibel.
 - **Ausgleich:** das `1/r` gilt im Freien. In einem Raum kommt Diffusschall
   dazu, der Pegel fällt flacher ab als 6 dB pro Abstandsverdopplung - die
   volle Korrektur ist dann zu viel und die Mitte kippt zur ferneren Box.

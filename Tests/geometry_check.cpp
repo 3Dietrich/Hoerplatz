@@ -46,12 +46,18 @@ int main()
         CHECK (a.distL < a.distR);
         CHECK (a.leftIsNearer() && ! a.centred());
         CHECK (a.delayL > 0.0 && near (a.delayR, 0.0));
-        CHECK (a.gainL < 1.0 && near (a.gainR, 1.0));
-        CHECK (near (a.delaySeconds(), a.delayL) && near (a.gainRatio(), a.gainL));
+        // Pegelneutral: die naehere Box geht herunter, die fernere im
+        // selben Mass herauf, das Produkt bleibt eins.
+        CHECK (a.gainL < 1.0 && a.gainR > 1.0);
+        CHECK (near (a.gainL * a.gainR, 1.0, 1e-12));
+        CHECK (near (a.delaySeconds(), a.delayL));
+        CHECK (near (a.gainRatio(), a.gainL / a.gainR, 1e-12));
         // Die Mitte liegt von dort aus rechts, der Kopf dreht dorthin.
         CHECK (a.headAngleDeg > 0.0);
         // Pegel folgt 1/r: das Verhaeltnis der Pegel ist das der Abstaende.
         CHECK (near (a.gainL / a.gainR, a.distL / a.distR, 1e-12));
+        // Gesamtlautstaerke unveraendert - auch abseits der Mitte.
+        CHECK (near (a.gainL * a.gainR, 1.0, 1e-12));
         // Ausgeglichen kommt beides gleichzeitig an.
         CHECK (near (a.distL / Geometry::speedOfSound + a.delayL,
                      a.distR / Geometry::speedOfSound + a.delayR, 1e-12));
@@ -109,19 +115,14 @@ int main()
         CHECK (near (dbOver, 2.0 * dbFull, 1e-9));
     }
 
-    // Die Prozentskala des Reglers: 100 % ist der im Raum gehoerte
-    // Normalfall und liegt in der Mitte, 141 % die Rechnung fuers Freie,
-    // die Enden bleiben bei 0 und dem doppelten Dezibelwert.
+    // Die Prozentskala des Reglers laeuft geradlinig: 100 % ist die
+    // Rechnung nach 1/r, die Enden liegen bei 0 und beim doppelten
+    // Dezibelwert.
     {
         CHECK (near (Geometry::gainExponent (0.0), 0.0));
-        CHECK (near (Geometry::gainExponent (100.0), Geometry::roomExponent));
+        CHECK (near (Geometry::gainExponent (100.0), 1.0));
         CHECK (near (Geometry::gainExponent (200.0), Geometry::maxExponent));
-        CHECK (std::fabs (Geometry::gainExponent (141.0) - 1.0) < 0.01);
-        // Monoton und ohne Sprung an der Nahtstelle.
-        CHECK (Geometry::gainExponent (99.9) < Geometry::gainExponent (100.1));
-        CHECK (std::fabs (Geometry::gainExponent (99.9) - Geometry::gainExponent (100.1)) < 0.01);
-        // Halber Weg unter 100 % ist auch halbe Korrektur.
-        CHECK (near (Geometry::gainExponent (50.0), 0.5 * Geometry::roomExponent));
+        CHECK (near (Geometry::gainExponent (50.0), 0.5));
     }
 
     // Der Laufzeitunterschied kann den Abstand der Boxen nie ueberschreiten
@@ -136,7 +137,7 @@ int main()
             {
                 const auto a = Geometry::compute (l, r, { x, y });
                 CHECK (std::fabs (a.delayL - a.delayR) <= maxDelay + 1e-9);
-                CHECK (a.gainL <= 1.0 + 1e-12 && a.gainR <= 1.0 + 1e-12);
+                CHECK (near (a.gainL * a.gainR, 1.0, 1e-9));
                 CHECK (a.delayL >= 0.0 && a.delayR >= 0.0);
             }
     }

@@ -105,8 +105,10 @@ int main()
         // Pegel: der naehere Kanal ist im Verhaeltnis der Abstaende leiser.
         const float sumL = sumOf (buffer, 0);
         const float sumR = sumOf (buffer, 1);
-        CHECK (std::abs (sumR - 1.0f) < 0.02f);
+        CHECK (std::abs (sumR - (float) a.gainR) < 0.02f);
         CHECK (std::abs (sumL - (float) a.gainL) < 0.02f);
+        // Die Korrektur nimmt der einen Seite, was sie der anderen gibt.
+        CHECK (std::abs (sumL * sumR - 1.0f) < 0.03f);
 
         std::printf ("links: Index %d, Pegel %.3f (erwartet %.3f)\n", l.index, sumL, a.gainL);
         std::printf ("rechts: Index %d, Pegel %.3f\n", r.index, sumR);
@@ -151,19 +153,19 @@ int main()
         const auto r = findPeak (buffer, 1);
 
         CHECK (l.index == r.index);
-        CHECK (std::abs (sumOf (buffer, 0) - 1.0f) < 0.02f);
+        CHECK (std::abs (sumOf (buffer, 0) - (float) a.gainL) < 0.02f);
         CHECK (std::abs (sumOf (buffer, 1) - (float) a.gainR) < 0.02f);
     }
 
-    // Die Reglermitte wirkt in Dezibel: 100 % ergeben genau den im Raum
-    // gehoerten Anteil des vollen 1/r-Wertes.
+    // Der Regler wirkt in Dezibel: 30 % ergeben genau drei Zehntel des
+    // vollen 1/r-Wertes.
     {
         HoerplatzProcessor proc;
         setParam (proc, Params::leftX, -2.75f);
         setParam (proc, Params::rightX, 2.75f);
         setParam (proc, Params::listenerX, -2.1f);
         setParam (proc, Params::listenerY,  1.6f);
-        setParam (proc, Params::gainAmount, 100.0f);
+        setParam (proc, Params::gainAmount, 30.0f);
 
         const auto full = Geometry::compute ({ -2.75, 0.35 }, { 2.75, 0.35 }, { -2.1, 1.6 }, 1.0);
         const auto buffer = impulseResponse (proc, sr, 2048);
@@ -172,7 +174,7 @@ int main()
         const double dbHeard = 20.0 * std::log10 (sumOf (buffer, 0));
         CHECK (std::abs (dbHeard - Geometry::roomExponent * dbFull) < 0.2);
 
-        std::printf ("100 %%: %.1f dB (1/r waeren %.1f dB)\n", dbHeard, dbFull);
+        std::printf ("30 %%: %.2f dB links (bei 100 %% waeren es %.2f dB)\n", dbHeard, dbFull);
     }
 
     // Ein eingetippter Boxenabstand muss die Boxen wirklich verschieben.

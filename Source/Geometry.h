@@ -28,19 +28,15 @@ namespace Geometry
     // -14,0 dB, gehoert richtig waren -4,2 dB.
     inline constexpr double roomExponent = 0.30;
 
-    // Der Regler zeigt Prozent, und 100 % ist dieser gehoerte Normalfall -
-    // nicht die reine Lehre. So steht die Vorgabe in der Mitte des Weges und
-    // man sieht am Zeiger, ob man darueber oder darunter liegt. Unterhalb
-    // laeuft die Skala gleichmaessig auf null, oberhalb weiter bis zum
-    // doppelten Dezibelwert von 1/r; das Freifeld liegt bei rund 141 %.
+    // Der Regler zeigt Prozent von genau dieser Rechnung: 100 % ist 1/r,
+    // 0 % laesst die Pegel in Ruhe, 200 % verdoppelt den Dezibelwert. Die
+    // Skala bleibt damit geradlinig - der gehoerte Wert steckt in der
+    // Vorgabe des Parameters, nicht in einer verbogenen Achse.
     inline constexpr double maxExponent = 2.0;
 
     inline double gainExponent (double percent)
     {
-        const double p = std::max (0.0, percent);
-        return p <= 100.0
-             ? roomExponent * p * 0.01
-             : roomExponent + (p - 100.0) * 0.01 * (maxExponent - roomExponent);
+        return std::max (0.0, percent) * 0.01;
     }
 
     struct Point { double x = 0.0, y = 0.0; };
@@ -61,9 +57,10 @@ namespace Geometry
         bool leftIsNearer() const { return distL < distR; }
         bool centred (double tolerance = 0.005) const { return std::fabs (distL - distR) < tolerance; }
 
-        // Betrag der Korrektur, unabhaengig von der Seite.
+        // Betrag der Korrektur, unabhaengig von der Seite: der Pegel-
+        // unterschied zwischen den beiden Boxen, wie ihn die Anzeige zeigt.
         double delaySeconds() const { return std::max (delayL, delayR); }
-        double gainRatio() const { return std::min (gainL, gainR); }
+        double gainRatio() const { return std::min (gainL, gainR) / std::max (gainL, gainR); }
     };
 
     // gainAmount steuert, wie weit der Pegelausgleich geht: 1.0 ist die
@@ -93,13 +90,19 @@ namespace Geometry
         a.delayR = (far - a.distR) / speedOfSound;
 
         // Pegel: der Schalldruck faellt mit 1/r. Damit beide Boxen am
-        // Hoerplatz gleich laut ankommen, wird die naehere abgesenkt - im
-        // Verhaeltnis der Abstaende. Angehoben wird nie, der lauteste Kanal
-        // bleibt bei 1.0, so kann nichts uebersteuern.
-        // Als Potenz gerechnet, weil der Anteil in Dezibel wirken soll:
-        // (d/dmax)^n entspricht dem n-fachen Dezibelwert.
-        a.gainL = std::pow (a.distL / far, gainAmount);
-        a.gainR = std::pow (a.distR / far, gainAmount);
+        // Hoerplatz gleich laut ankommen, muss die naehere leiser sein - im
+        // Verhaeltnis der Abstaende, als Potenz gerechnet, weil der Anteil in
+        // Dezibel wirken soll.
+        //
+        // Verteilt wird der Unterschied auf beide Seiten: die naehere Box
+        // geht um die halbe Spanne herunter, die fernere um dieselbe halbe
+        // Spanne herauf. Das Produkt beider Faktoren bleibt dadurch 1, die
+        // Gesamtlautstaerke aendert sich also nicht, wenn der Hoerplatz
+        // wandert - anders als beim blossen Absenken, das alles leiser macht.
+        // Der Preis ist Headroom: ein Kanal wird angehoben.
+        const double half = 0.5 * gainAmount;
+        a.gainL = std::pow (a.distL / a.distR, half);
+        a.gainR = std::pow (a.distR / a.distL, half);
 
         // Richtungen zu den Boxen, normiert.
         const double nlx = lx / a.distL, nly = ly / a.distL;
