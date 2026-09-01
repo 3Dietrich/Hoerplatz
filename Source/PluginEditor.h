@@ -49,8 +49,12 @@ private:
         std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attach;
     };
 
-    void styleSlider (juce::Slider&);
-    void setUpRow (Row&, const char* paramId, const juce::String& tooltip);
+    // Nicht alles ist gleich wichtig: Raummasse und Zahlenfeld dienen der
+    // Uebersicht, eingestellt wird mit den anderen. Das zeigen gedaempfte
+    // Farben und kleinere Schrift - und dass sie als erste weichen, wenn das
+    // Fenster klein wird.
+    void styleSlider (juce::Slider&, bool primary);
+    void setUpRow (Row&, const char* paramId, bool primary);
 
     HoerplatzProcessor& plugin;
 

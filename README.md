@@ -61,6 +61,18 @@ klingt diffus im Kopf, nicht weit außen. Dazu macht ein Tiefpass zu, und das
 Ganze klingt über gut zwei Sekunden aus. Der Knopf leuchtet nach, solange die
 Fahne steht; danach kommt die Musik zurück.
 
+**Wenn es klein werden soll**, zieh das Fenster einfach zusammen: was nur der
+Übersicht dient, weicht zuerst. Erst geht der Grundriss - und mit ihm die
+Raummaße, die ohne ihn nichts mehr bedeuten -, dann das Zahlenfeld, zuletzt
+rücken Beschriftung und Regler in eine Zeile zusammen. Übrig bleibt, womit
+man wirklich einstellt: Boxenabstand, Hörplatz, die beiden Bypässe mit dem
+Ausgleich und das Testgeräusch. Am Ende passt das auf 300 × 250 Punkte.
+
+![Drei Stufen beim Verkleinern](docs/kompakt.png)
+
+Dass Raummaße und Zahlenfeld weicher und kleiner gezeichnet sind als der
+Rest, hat denselben Grund: mit ihnen stellt man nichts ein.
+
 Oben rechts sitzen zwei Schalter: **EN/DE** stellt die Sprache um, **?**
 schaltet die Hilfetexte ein und aus, die beim Verweilen über einem
 Bedienelement erscheinen. Beides wird mit dem Projekt gespeichert.

@@ -35,17 +35,17 @@ void ReadoutPanel::paint (juce::Graphics& g)
     g.setColour (Theme::line);
     g.drawRoundedRectangle (area.reduced (0.5f), Theme::corner, 1.0f);
 
-    auto body = area.reduced (10.0f, 8.0f);
-    const float rowH = 18.0f;
-    const float col1 = 74.0f;
+    auto body = area.reduced (10.0f, 6.0f);
+    const float rowH = 16.0f;
+    const float col1 = 70.0f;
 
     auto row = [&] (float y) { return juce::Rectangle<float> (body.getX(), y, body.getWidth(), rowH); };
     float y = body.getY();
 
     auto line = [&] (const juce::String& name, const juce::String& value, juce::Colour c)
     {
-        g.setFont (monoFont (12.0f));
-        g.setColour (Theme::textDim);
+        g.setFont (monoFont (11.0f));
+        g.setColour (Theme::textDim.withAlpha (0.55f));
         g.drawText (name, row (y).withWidth (col1), juce::Justification::centredLeft);
         g.setColour (c);
         g.drawText (value, row (y).withTrimmedLeft (col1), juce::Justification::centredRight);
@@ -58,12 +58,17 @@ void ReadoutPanel::paint (juce::Graphics& g)
     const juce::String side = centred ? juce::String (t.centred)
                                       : juce::String (a.leftIsNearer() ? t.sideLeft : t.sideRight);
 
-    line (t.correction, side, centred ? Theme::textDim : Theme::amber);
+    // Gedaempft: hier wird nichts eingestellt, hier steht nur, was die
+    // Einstellung gerade bedeutet.
+    const auto valueColour = Theme::textDim.withAlpha (0.8f);
+
+    line (t.correction, side, centred ? Theme::textDim.withAlpha (0.5f)
+                                      : Theme::amber.withAlpha (0.7f));
     line (t.delayRow, noDelay ? juce::String (t.off) : fixed (a.delaySeconds() * 1000.0, 2, "ms"),
-          noDelay ? Theme::textDim.withAlpha (0.5f) : Theme::cyan);
+          noDelay ? Theme::textDim.withAlpha (0.4f) : valueColour);
     line (t.gainRow, noGain ? juce::String (t.off)
                             : fixed (juce::Decibels::gainToDecibels (a.gainRatio()), 1, "dB"),
-          noGain ? Theme::textDim.withAlpha (0.5f) : Theme::cyan);
+          noGain ? Theme::textDim.withAlpha (0.4f) : valueColour);
 }
 
 juce::Label* HoerplatzEditor::MonoLookAndFeel::createSliderTextBox (juce::Slider& slider)
@@ -117,7 +122,7 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     addAndMakeVisible (readout);
 
     // Boxenabstand: kein eigener Parameter, sondern ein Griff an beide Boxen.
-    styleSlider (speakerDistance.slider);
+    styleSlider (speakerDistance.slider, true);
     speakerDistance.slider.setRange (0.30, 24.0, 0.01);
     speakerDistance.slider.textFromValueFunction = [] (double v) { return juce::String (v, 2) + " m"; };
     speakerDistance.slider.valueFromTextFunction = [] (const juce::String& s) { return Params::parseNumber (s); };
@@ -142,13 +147,15 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     // Kennung, damit die Pruefung den Regler findet, ohne die Reihenfolge
     // der Kindkomponenten zu erraten.
     speakerDistance.slider.setComponentID ("speakerDistance");
+    speakerDistance.label.setFont (juce::Font (juce::FontOptions (12.0f)));
+    speakerDistance.label.setColour (juce::Label::textColourId, Theme::textDim);
     addAndMakeVisible (speakerDistance.label);
     addAndMakeVisible (speakerDistance.slider);
 
-    setUpRow (roomWidth, Params::roomWidth, {});
-    setUpRow (roomDepth, Params::roomDepth, {});
-    setUpRow (listenerX, Params::listenerX, {});
-    setUpRow (listenerY, Params::listenerY, {});
+    setUpRow (roomWidth, Params::roomWidth, false);
+    setUpRow (roomDepth, Params::roomDepth, false);
+    setUpRow (listenerX, Params::listenerX, true);
+    setUpRow (listenerY, Params::listenerY, true);
 
     for (auto* b : { &bypassDelay, &bypassGain })
     {
@@ -179,8 +186,8 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     gainAmountLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (gainAmountLabel);
 
-    areaLabel.setFont (monoFont (12.0f));
-    areaLabel.setColour (juce::Label::textColourId, Theme::textDim);
+    areaLabel.setFont (monoFont (11.0f));
+    areaLabel.setColour (juce::Label::textColourId, Theme::textDim.withAlpha (0.55f));
     addAndMakeVisible (areaLabel);
 
     testToneButton.setClickingTogglesState (true);
@@ -226,7 +233,9 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
 
     setSize (940, 560);
     setResizable (true, true);
-    setResizeLimits (760, 460, 1800, 1200);
+    // Klein genug, dass nur noch das Noetige dasteht: Boxenabstand,
+    // Hoerplatz, die beiden Bypaesse mit dem Ausgleich, das Testgeraeusch.
+    setResizeLimits (300, 250, 1800, 1200);
 
     startTimerHz (30);
 }
@@ -236,26 +245,31 @@ HoerplatzEditor::~HoerplatzEditor()
     setLookAndFeel (nullptr);
 }
 
-void HoerplatzEditor::styleSlider (juce::Slider& s)
+void HoerplatzEditor::styleSlider (juce::Slider& s, bool primary)
 {
     s.setSliderStyle (juce::Slider::LinearHorizontal);
-    s.setTextBoxStyle (juce::Slider::TextBoxRight, false, 68, 18);
-    s.setColour (juce::Slider::trackColourId, Theme::cyan.withAlpha (0.55f));
+    s.setTextBoxStyle (juce::Slider::TextBoxRight, false, 66, 18);
+    s.setColour (juce::Slider::trackColourId, primary ? Theme::cyan.withAlpha (0.55f)
+                                                      : juce::Colours::white.withAlpha (0.16f));
     s.setColour (juce::Slider::backgroundColourId, Theme::surface2);
-    s.setColour (juce::Slider::thumbColourId, Theme::cyan);
-    s.setColour (juce::Slider::textBoxTextColourId, Theme::text);
-    s.setColour (juce::Slider::textBoxOutlineColourId, Theme::line);
-    s.setColour (juce::Slider::textBoxBackgroundColourId, Theme::surface);
+    s.setColour (juce::Slider::thumbColourId, primary ? Theme::cyan
+                                                      : Theme::textDim.withAlpha (0.6f));
+    s.setColour (juce::Slider::textBoxTextColourId, primary ? Theme::text
+                                                            : Theme::textDim.withAlpha (0.7f));
+    s.setColour (juce::Slider::textBoxOutlineColourId, primary ? Theme::line
+                                                              : juce::Colours::transparentBlack);
+    s.setColour (juce::Slider::textBoxBackgroundColourId, primary ? Theme::surface
+                                                                  : juce::Colours::transparentBlack);
 }
 
-void HoerplatzEditor::setUpRow (Row& r, const char* paramId, const juce::String& tooltip)
+void HoerplatzEditor::setUpRow (Row& r, const char* paramId, bool primary)
 {
-    r.label.setFont (juce::Font (juce::FontOptions (12.0f)));
-    r.label.setColour (juce::Label::textColourId, Theme::textDim);
+    r.label.setFont (juce::Font (juce::FontOptions (primary ? 12.0f : 11.0f)));
+    r.label.setColour (juce::Label::textColourId, primary ? Theme::textDim
+                                                          : Theme::textDim.withAlpha (0.55f));
     addAndMakeVisible (r.label);
 
-    styleSlider (r.slider);
-    r.slider.setTooltip (tooltip);
+    styleSlider (r.slider, primary);
     addAndMakeVisible (r.slider);
 
     r.attach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
@@ -406,26 +420,83 @@ void HoerplatzEditor::resized()
     buttons.removeFromRight (4);
     langButton.setBounds (buttons.removeFromRight (34));
 
-    auto side = area.removeFromRight (300).reduced (10);
-    room.setBounds (area.reduced (6));
+    // Der Grundriss braucht Platz, um etwas zu zeigen. Ist das Fenster zu
+    // eng oder zu flach, faellt er weg - und mit ihm die Raummasse, die ohne
+    // ihn nichts mehr bedeuten.
+    const bool showPlan = getWidth() >= 620 && getHeight() >= 360;
+    room.setVisible (showPlan);
+    for (auto* r : { &roomWidth, &roomDepth })
+    {
+        r->label.setVisible (showPlan);
+        r->slider.setVisible (showPlan);
+    }
+    areaLabel.setVisible (showPlan);
+
+    auto side = area;
+    if (showPlan)
+    {
+        side = area.removeFromRight (juce::jmin (300, area.getWidth() / 2));
+        room.setBounds (area.reduced (6));
+    }
+    side = side.reduced (10, 8);
+
+    // Aus der Hoehe folgt, wieviel hineinpasst. Zuerst wird das Zahlenfeld
+    // aufgegeben, dann ruecken Beschriftung und Regler in eine Zeile
+    // zusammen. Was bleibt, ist das, womit man einstellt.
+    constexpr int bypassHeight = 78;
+    constexpr int testHeight = 26;
+    const int rowCount = 3 + (showPlan ? 2 : 0);
+    const int extras = showPlan ? 24 : 0;              // Flaechenanzeige
+
+    const auto needed = [&] (int rowHeight, bool withReadout)
+    {
+        return rowCount * rowHeight + extras + 4 + bypassHeight
+             + 12 + testHeight + (withReadout ? 78 : 0);
+    };
+
+    int rowHeight = 43;
+    bool showReadout = true;
+    if (needed (rowHeight, true) > side.getHeight())
+    {
+        showReadout = false;
+        if (needed (rowHeight, false) > side.getHeight())
+        {
+            rowHeight = 25;
+            showReadout = needed (rowHeight, true) <= side.getHeight();
+        }
+    }
+    const bool tightRows = rowHeight < 43;
+    readout.setVisible (showReadout);
 
     auto place = [&] (Row& r)
     {
-        r.label.setBounds (side.removeFromTop (15));
-        r.slider.setBounds (side.removeFromTop (22));
-        side.removeFromTop (6);
+        auto line = side.removeFromTop (tightRows ? 22 : 37);
+        if (tightRows)
+        {
+            r.label.setBounds (line.removeFromLeft (juce::jmin (92, line.getWidth() / 2)));
+            r.slider.setBounds (line);
+        }
+        else
+        {
+            r.label.setBounds (line.removeFromTop (15));
+            r.slider.setBounds (line);
+        }
+        side.removeFromTop (tightRows ? 3 : 6);
     };
 
     place (speakerDistance);
-    place (roomWidth);
-    place (roomDepth);
-    areaLabel.setBounds (side.removeFromTop (18));
-    side.removeFromTop (6);
+    if (showPlan)
+    {
+        place (roomWidth);
+        place (roomDepth);
+        areaLabel.setBounds (side.removeFromTop (18));
+        side.removeFromTop (6);
+    }
     place (listenerX);
     place (listenerY);
 
     side.removeFromTop (4);
-    auto bypassArea = side.removeFromTop (78);
+    auto bypassArea = side.removeFromTop (juce::jmin (bypassHeight, side.getHeight()));
     auto knobArea = bypassArea.removeFromRight (78);
     gainAmountLabel.setBounds (knobArea.removeFromTop (16));
     gainAmountKnob.setBounds (knobArea);
@@ -434,11 +505,17 @@ void HoerplatzEditor::resized()
     auto switches = bypassArea.withSizeKeepingCentre (bypassArea.getWidth(), 44);
     bypassDelay.setBounds (switches.removeFromTop (22));
     bypassGain.setBounds (switches.removeFromTop (22));
-    side.removeFromTop (10);
 
-    readout.setBounds (side.removeFromTop (juce::jmin (70, side.getHeight())));
+    // Das Testgeraeusch steht ueber dem Zahlenfeld: man greift danach,
+    // waehrend man einstellt, und liest darunter ab, was dabei herauskommt.
     side.removeFromTop (12);
-    testToneButton.setBounds (side.removeFromTop (26));
+    testToneButton.setBounds (side.removeFromTop (juce::jmin (testHeight, side.getHeight())));
+
+    if (showReadout)
+    {
+        side.removeFromTop (10);
+        readout.setBounds (side.removeFromTop (juce::jmin (68, side.getHeight())));
+    }
 }
 
 void HoerplatzEditor::timerCallback()
