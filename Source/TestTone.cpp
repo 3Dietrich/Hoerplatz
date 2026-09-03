@@ -5,10 +5,8 @@
 
 namespace
 {
-    constexpr double pulsePeriod = 0.40;    // Abstand der Impulse
-    constexpr double pulseAttack = 0.00015; // Anstieg: praktisch senkrecht
-    constexpr double pulseDecay  = 0.030;   // Abfall im Betrieb - ein kurzes Tack
-    constexpr float  pulseLevel  = 0.45f;   // Spitze rund -7 dBFS
+    constexpr double pulsePeriod = 0.40;    // Abstand der Schlaege
+    constexpr float  pulseLevel  = 0.64f;   // Spitze rund -7 dBFS
 
     constexpr double widenTime = 0.40;      // Anschwellen der Auslenkung:
                                             // der erste Tropfen steht noch
@@ -17,16 +15,10 @@ namespace
     constexpr double fadeTau   = 1.05;      // Abklingen beim Verduennen
     constexpr double fadeMax   = 3.20;      // danach ist Ruhe
 
-        constexpr double tailDecay = 0.055;     // Abfall am Ende des Verduennens:
-                                            // kurz genug, dass die Tropfen
-                                            // einzeln stehen bleiben
-
-    // Wieviel eigenes Rauschen die Seiten am Ende hoechstens bekommen. Ginge
+    // Wieviel eigenen Schlag die Seiten am Ende hoechstens bekommen. Ginge
     // es bis eins, waere von der Ortung nichts mehr uebrig: der gemeinsame,
     // im Bild verteilte Anteil verschwaende gerade dann, wenn es am
-    // breitesten sein soll - uebrig bliebe diffuses Rauschen, das im
-    // Kopfhoerer im Kopf steht statt aussen. Der eigene Anteil fuellt nur
-    // die Zwischenraeume.
+    // breitesten sein soll. Der eigene Anteil fuellt nur die Zwischenraeume.
     constexpr double maxSides = 0.35;
 
     constexpr double baseDelayMs = 1.6;     // Sockel der Verzoegerungsleitung
@@ -34,6 +26,27 @@ namespace
                                             // zwischen zwei echten Ohren, das
                                             // traegt im Kopfhoerer bis an den
                                             // Rand und darueber hinaus
+
+    // Ausschwingen am Ende des Verduennens, als Vielfaches des Betriebs:
+    // laenger und weicher, aber kurz genug, dass die Tropfen einzeln stehen
+    // bleiben.
+    constexpr double tailStretch = 1.9;
+
+    // Der Schlag. Die Frequenzen liegen dort, wo sich am schaerfsten orten
+    // laesst: unten traegt der Laufzeitunterschied, oben die Flanke und der
+    // Pegelunterschied. Die kurzen Zeitkonstanten der oberen Moden machen
+    // daraus ein Klopfen und keinen Ton - schon nach wenigen
+    // Hundertstelsekunden ist der Schlag vorbei, und was der Raum daraus
+    // macht, kommt danach und nicht mittendrin.
+    struct ModeSpec { double hz, tau; float amp; };
+
+    constexpr ModeSpec modeSpecs[]
+    {
+        {  620.0, 0.030, 0.50f },
+        { 1370.0, 0.018, 1.00f },
+        { 2530.0, 0.010, 0.75f },
+        { 4300.0, 0.005, 0.45f }
+    };
 
     float towards (float distance, float maxStep)
     {
@@ -52,36 +65,64 @@ namespace
     }
 }
 
-void TestTone::Noise::prepare (float highpass, float lowpass, unsigned int seed)
+void TestTone::Click::prepare (double sampleRate, double detune)
 {
-    highCoeff = highpass;
-    lowCoeff = lowpass;
-    state = seed;
+    sr = sampleRate;
+
+    float sum = 0.0f;
+    for (int i = 0; i < 4; ++i)
+    {
+        auto& m = modes[(size_t) i];
+        const double w = 2.0 * M_PI * modeSpecs[i].hz * detune / sr;
+
+        m.cosw = std::cos (w);
+        m.sinw = std::sin (w);
+        m.tau  = modeSpecs[i].tau;
+        m.amp  = modeSpecs[i].amp;
+        sum += m.amp;
+    }
+
+    norm = sum > 0.0f ? 1.0f / sum : 1.0f;
     reset();
 }
 
-void TestTone::Noise::reset()
+void TestTone::Click::reset()
 {
-    b0 = b1 = b2 = 0.0f;
-    highState = lowState = 0.0f;
+    for (auto& m : modes)
+    {
+        m.re = m.im = 0.0;
+        m.decay = 0.0;
+    }
 }
 
-float TestTone::Noise::next()
+void TestTone::Click::hit (double stretch)
 {
-    state = state * 1664525u + 1013904223u;
-    const float white = (float) ((int) (state >> 8) - 8388608) / 8388608.0f;
+    for (auto& m : modes)
+    {
+        // Der Zeiger startet auf der reellen Achse: die Ausgabe faengt bei
+        // null an und steigt in einer Viertelperiode auf ihr Maximum. Bei
+        // 1370 Hz sind das keine zwei Zehntelmillisekunden - die Flanke
+        // steht damit praktisch senkrecht, ohne dass ein Sprung entsteht.
+        m.re = 1.0;
+        m.im = 0.0;
+        m.decay = std::exp (-1.0 / (std::max (1.0e-6, m.tau * stretch) * sr));
+    }
+}
 
-    // Rosa Faerbung nach Paul Kellett.
-    b0 = 0.99765f * b0 + white * 0.0990460f;
-    b1 = 0.96300f * b1 + white * 0.2965164f;
-    b2 = 0.57000f * b2 + white * 1.0526913f;
-    const float pink = (b0 + b1 + b2 + white * 0.1848f) * 0.18f;
+float TestTone::Click::next()
+{
+    double out = 0.0;
 
-    // Hochpass als Differenz zum Tiefpassanteil, danach der Tiefpass. Was
-    // ganz unten und ganz oben liegt, hilft beim Orten nicht und macht das
-    // Geraeusch nur anstrengender.
-    const float lows = onePole (pink, highState, highCoeff);
-    return onePole (pink - lows, lowState, lowCoeff);
+    for (auto& m : modes)
+    {
+        const double re = (m.re * m.cosw - m.im * m.sinw) * m.decay;
+        const double im = (m.re * m.sinw + m.im * m.cosw) * m.decay;
+        m.re = re;
+        m.im = im;
+        out += m.amp * im;
+    }
+
+    return (float) out * norm;
 }
 
 void TestTone::Ring::prepare (int size)
@@ -127,14 +168,12 @@ void TestTone::prepare (double sampleRate)
     maxItdSamples    = (float) (maxItdMs    * 0.001 * sr);
     sharedDelay.prepare ((int) (baseDelaySamples + maxItdSamples) + 8);
 
-    const float hp = coeffFor (120.0, sr);
-    const float lp = coeffFor (12000.0, sr);
-
-    // Drei unabhaengige Quellen: eine gemeinsame fuer die Mitte und je eine
-    // pro Seite. Ihre Mischung bestimmt, wie breit das Geraeusch steht.
-    common.prepare (hp, lp, 0x13579bdfu);
-    leftOnly.prepare (hp, lp, 0x2468ace0u);
-    rightOnly.prepare (hp, lp, 0x0f1e2d3cu);
+    // Der gemeinsame Schlag steht in der Mitte, die beiden anderen sind
+    // gegeneinander verstimmt - beim Verduennen gehen die Seiten dadurch
+    // auseinander, statt nur lauter und leiser zu werden.
+    common.prepare (sr, 1.0);
+    leftOnly.prepare (sr, 0.94);
+    rightOnly.prepare (sr, 1.07);
 
     reset();
 }
@@ -167,7 +206,7 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
     if (wantsActive && (! sounding || fading))
     {
         // Frischer Start, oder wieder eingeschaltet, waehrend es noch
-        // ausklang: die Impulse setzen sofort wieder ein.
+        // ausklang: die Schlaege setzen sofort wieder ein.
         sounding = true;
         fading = false;
         pulsePhase = pulsePeriod;
@@ -199,9 +238,10 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
         if (sounding)
         {
             // Beim Verduennen wandert alles gleichzeitig: das Bild geht auf,
-            // die Impulse werden laenger, der Klang dunkler, das Ganze leiser.
+            // die Schlaege werden laenger, der Klang dunkler, das Ganze
+            // leiser.
             double width = 0.0;
-            double decay = pulseDecay;
+            double stretch = 1.0;
             double level = 1.0;
             double cutoff = 12000.0;
 
@@ -209,10 +249,10 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
             {
                 fadeTime += dt;
                 const double t = std::min (1.0, fadeTime / widenTime);
-                width  = 0.5 - 0.5 * std::cos (M_PI * t);           // weich von 0 auf 1
-                decay  = pulseDecay + (tailDecay - pulseDecay) * t;
-                level  = std::exp (-fadeTime / fadeTau);
-                cutoff = 900.0 + 11100.0 * std::exp (-fadeTime * 1.1);
+                width   = 0.5 - 0.5 * std::cos (M_PI * t);          // weich von 0 auf 1
+                stretch = 1.0 + (tailStretch - 1.0) * t;
+                level   = std::exp (-fadeTime / fadeTau);
+                cutoff  = 900.0 + 11100.0 * std::exp (-fadeTime * 1.1);
 
                 if (fadeTime > fadeMax)
                 {
@@ -221,10 +261,7 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
                 }
             }
 
-            // Beim Verduennen ruecken die Impulse zusammen und laufen mit
-            // ihrem laengeren Abfall ineinander - aus einzelnen Schlaegen
-            // wird eine Wolke.
-            // Beim Verduennen ruecken die Impulse zusammen. Sie bleiben aber
+            // Beim Verduennen ruecken die Schlaege zusammen. Sie bleiben aber
             // deutlich kuerzer als ihr Abstand - ueberlappen sie, mittelt
             // sich ihre Streuung wieder zur Mitte und alles klingt nur noch
             // diffus.
@@ -250,14 +287,11 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
                     pulseSide = 1.0f;   // der erste Tropfen geht nach links
                     pulsePan = 0.0f;
                 }
-            }
 
-            // Senkrechte Flanke, dann exponentiell zurueck. Die Flanke ist
-            // das eigentliche Werkzeug: an ihr haengt, ob man einen
-            // Laufzeitunterschied ueberhaupt hoeren kann.
-            const float env = pulsePhase < pulseAttack
-                            ? (float) (pulsePhase / pulseAttack)
-                            : (float) std::exp (-(pulsePhase - pulseAttack) / decay);
+                common.hit (stretch);
+                leftOnly.hit (stretch);
+                rightOnly.hit (stretch);
+            }
 
             // Von der Mitte in die Breite: der gemeinsame Anteil weicht
             // zwei eigenen. Ueber Sinus und Kosinus gemischt, damit die
@@ -268,7 +302,7 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
 
             sharedDelay.push (common.next());
 
-            // Der Ort des Impulses: Laufzeit zuerst, Pegel dazu. Die
+            // Der Ort des Schlages: Laufzeit zuerst, Pegel dazu. Die
             // Laufzeit traegt die Ortung - ein Pegelunterschied allein
             // klingt im Kopfhoerer nur diffus, nicht weit.
             const float pan = pulsePan * (float) width;
@@ -283,12 +317,12 @@ void TestTone::render (float* left, float* right, int numSamples, float* mixOut)
             const float ownL = leftOnly.next();
             const float ownR = rightOnly.next();
 
-            // Dichtere und laengere Impulse tragen mehr Energie. Ohne
+            // Dichtere und laengere Schlaege tragen mehr Energie. Ohne
             // Ausgleich wuerde das Verduennen lauter beginnen als der
             // Betrieb - der Faktor haelt die mittlere Leistung gleich, den
             // Rueckgang besorgt allein das Abklingen.
-            const double density = std::sqrt ((period / pulsePeriod) * (pulseDecay / decay));
-            const float gain = env * pulseLevel * (float) (level * density);
+            const double density = std::sqrt ((period / pulsePeriod) / stretch);
+            const float gain = pulseLevel * (float) (level * density);
             sampleL = (sharedL * centre * panL + ownL * sides) * gain;
             sampleR = (sharedR * centre * panR + ownR * sides) * gain;
 
