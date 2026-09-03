@@ -16,6 +16,7 @@ HoerplatzProcessor::HoerplatzProcessor()
     pBypassDelay     = apvts.getRawParameterValue (Params::bypassDelay);
     pBypassGain      = apvts.getRawParameterValue (Params::bypassGain);
     pGainAmount      = apvts.getRawParameterValue (Params::gainAmount);
+    pFollowHead      = apvts.getRawParameterValue (Params::followHead);
 
     for (auto* id : { Params::speakerDistance, Params::leftX, Params::leftY,
                       Params::rightX, Params::rightY })
@@ -149,6 +150,9 @@ void HoerplatzProcessor::prepareToPlay (double newSampleRate, int samplesPerBloc
         s->setCurrentAndTargetValue (1.0f);
     }
 
+    smoothSwap.reset (sampleRate, 0.02);
+    smoothSwap.setCurrentAndTargetValue (0.0f);
+
     testTone.prepare (sampleRate);
     testBuffer.setSize (2, samplesPerBlock);
     testMix.assign ((size_t) samplesPerBlock, 0.0f);
@@ -185,6 +189,13 @@ void HoerplatzProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     smoothGainL.setTargetValue (noGain ? 1.0f : (float) a.gainL);
     smoothGainR.setTargetValue (noGain ? 1.0f : (float) a.gainR);
 
+    // Kanal 0 gehoert immer der Box am linken Standort - daran haengt ihre
+    // Laufzeit und ihr Pegel. Steht diese Box vom Hoerplatz aus gesehen
+    // rechts, wandert deshalb der Inhalt, nicht die Korrektur: was links
+    // gehoert werden soll, geht in die Box, die von dort aus links steht.
+    const bool swap = a.mirrored && pFollowHead->load() > 0.5f;
+    smoothSwap.setTargetValue (swap ? 1.0f : 0.0f);
+
     auto* left  = buffer.getWritePointer (0);
     auto* right = buffer.getWritePointer (1);
 
@@ -212,11 +223,17 @@ void HoerplatzProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
     for (int i = 0; i < numSamples; ++i)
     {
+        // Die Seiten wechseln als Blende, nicht als Sprung.
+        const float s = smoothSwap.getNextValue();
+        const float inL = left[i], inR = right[i];
+        const float toL = inL + (inR - inL) * s;
+        const float toR = inR + (inL - inR) * s;
+
         delayL.setDelay (smoothDelayL.getNextValue());
         delayR.setDelay (smoothDelayR.getNextValue());
 
-        delayL.pushSample (0, left[i]);
-        delayR.pushSample (0, right[i]);
+        delayL.pushSample (0, toL);
+        delayR.pushSample (0, toR);
 
         left[i]  = delayL.popSample (0) * smoothGainL.getNextValue();
         right[i] = delayR.popSample (0) * smoothGainR.getNextValue();

@@ -30,10 +30,11 @@ Mittelsenkrechte zwischen den Boxen - überall darauf hörst du symmetrisch.
 |---|---|
 | Boxenabstand | zieht beide Boxen um ihre gemeinsame Mitte auseinander; folgt umgekehrt, wenn eine Box verschoben wird |
 | Raumbreite, Raumtiefe | dein Raum; die Fläche steht darunter |
-| Hörplatz seitlich, Abstand | dein Platz, gemessen von der Mitte der vorderen Wand |
+| Hörplatz seitlich, Abstand | dein Platz, gemessen an der Achse zwischen den Boxen: quer aus ihrer Mitte, längs senkrecht dazu |
 | Bypass Laufzeit | lässt die Verzögerung unangetastet |
 | Bypass Pegel | lässt die Lautstärke unangetastet |
-| Testgeräusch | scharfe Impulse zum Einrichten; verdünnt sich beim Ausschalten ins Stereobild |
+| L/R folgen dem Kopf | sitzt du hinter den Boxen, tauschen die Kanäle mit; aus bleibt L die linke Box |
+| Testgeräusch | trockenes Klopfen zum Einrichten; verdünnt sich beim Ausschalten ins Stereobild |
 | Ausgleich | wie weit die Pegelkorrektur geht; 100 % = `1/r` |
 
 Die beiden Bypass-Schalter sind zum Vergleichen da: einmal mit, einmal ohne.
@@ -42,14 +43,18 @@ Der Unterschied ist deutlicher, als man erwartet.
 Unten rechts steht knapp, was gerade passiert: welche Seite korrigiert wird
 und um wieviel - Verzögerung in Millisekunden, Absenkung in Dezibel.
 
-**Zum Einrichten: das Testgeräusch.** Kurze, scharfe Impulse aus rosa
-Rauschen, auf beiden Kanälen identisch. Die senkrechte Flanke ist das
-Werkzeug - ein weicher Einsatz verschmiert genau die Millisekunden, die man
-hier beurteilen will. Stimmt die Einstellung, steht das Geräusch als ein
-Punkt zwischen den Boxen; stimmt sie nicht, wandert oder verschmiert er.
-Solange es läuft, tritt die Musik zurück.
+**Zum Einrichten: das Testgeräusch.** Ein kurzes, trockenes Klopfen, auf
+beiden Kanälen identisch: ein Impuls regt vier gedämpfte Schwingungen
+zwischen 620 Hz und 4,3 kHz an, dort ortet das Gehör am schärfsten. Die
+Flanke steht nach vier Hundertstelmillisekunden - ein weicher Einsatz
+verschmiert genau die Millisekunden, die man hier beurteilen will. Und jeder
+Schlag ist derselbe: Rauschen klingt bei jedem Impuls anders, das Ohr
+beurteilt dann jedesmal ein neues Klangbild, statt sich auf einen stehenden
+Punkt einzuhören. Stimmt die Einstellung, steht das Klopfen als ein Punkt
+zwischen den Boxen; stimmt sie nicht, wandert oder verschmiert er. Solange es
+läuft, tritt die Musik zurück.
 
-Beim Ausschalten verdünnt es sich: die Impulse gehen abwechselnd nach links
+Beim Ausschalten verdünnt es sich: die Schläge gehen abwechselnd nach links
 und rechts, aus der Mitte heraus immer weiter hinaus, und klingen über gut
 zwei Sekunden aus.
 

@@ -83,6 +83,11 @@ private:
 
     juce::SmoothedValue<float> smoothDelayL, smoothDelayR, smoothGainL, smoothGainR;
 
+    // Ueberblendung zwischen gerader und getauschter Zuordnung. Wandert der
+    // Hoerplatz hinter die Aufstellung, wechseln die Kanaele - ohne die
+    // Blende waere an dieser Stelle ein Knacken.
+    juce::SmoothedValue<float> smoothSwap;
+
     double sampleRate = 44100.0;
 
     // Arbeitsspeicher fuer das Testgeraeusch, blockweise vorgehalten.
@@ -98,6 +103,7 @@ private:
     std::atomic<float>* pBypassDelay = nullptr;
     std::atomic<float>* pBypassGain = nullptr;
     std::atomic<float>* pGainAmount = nullptr;
+    std::atomic<float>* pFollowHead = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HoerplatzProcessor)
 };

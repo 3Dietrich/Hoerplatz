@@ -53,10 +53,15 @@ void ReadoutPanel::paint (juce::Graphics& g)
     };
 
     // Korrigiert wird immer nur die naehere Box - welche das ist, steht oben,
-    // darunter um wieviel.
+    // darunter um wieviel. Genannt wird die Seite so, wie sie vom Hoerplatz
+    // aus liegt: tauschen die Kanaele, tauscht auch das Wort - sonst stuende
+    // hier "links", waehrend an der Box ein R steht.
     const bool centred = a.centred();
+    const bool swapped = a.mirrored
+                      && processor.apvts.getRawParameterValue (Params::followHead)->load() > 0.5f;
+    const bool nearerIsLeft = a.leftIsNearer() != swapped;
     const juce::String side = centred ? juce::String (t.centred)
-                                      : juce::String (a.leftIsNearer() ? t.sideLeft : t.sideRight);
+                                      : juce::String (nearerIsLeft ? t.sideLeft : t.sideRight);
 
     // Gedaempft: hier wird nichts eingestellt, hier steht nur, was die
     // Einstellung gerade bedeutet.
@@ -129,8 +134,49 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
 
     setUpRow (roomWidth, Params::roomWidth, false);
     setUpRow (roomDepth, Params::roomDepth, false);
-    setUpRow (listenerX, Params::listenerX, true);
-    setUpRow (listenerY, Params::listenerY, true);
+    // Die beiden Hoerplatz-Regler zeigen nicht den Parameter, sondern den
+    // Platz an der Aufstellung gemessen: quer der Versatz aus der Mitte
+    // zwischen den Boxen, laengs der senkrechte Abstand zur Achse zwischen
+    // ihnen. Der Bezug ist damit die Aufstellung und nicht die Wand -
+    // gehoert wird schliesslich die Aufstellung.
+    setUpRow (listenerX, nullptr, true);
+    setUpRow (listenerY, nullptr, true);
+
+    for (auto* r : { &listenerX, &listenerY })
+    {
+        // Weit gefasst und in beide Richtungen offen: ein negativer Abstand
+        // heisst, der Platz liegt hinter der Achse.
+        r->slider.setRange (-24.0, 24.0, 0.01);
+        r->slider.textFromValueFunction = [] (double v)
+        {
+            return juce::String (std::abs (v) < 0.005 ? 0.0 : v, 2) + " m";
+        };
+        r->slider.valueFromTextFunction = [] (const juce::String& text)
+        {
+            return Params::parseNumber (text);
+        };
+        r->slider.onValueChange = [this] { writeSeat(); };
+
+        // Die Anzeige stellt sich beim Setzen des Bereichs, also bevor die
+        // Umrechnung stand - deshalb hier noch einmal.
+        r->slider.updateText();
+
+        // Beide Weltkoordinaten aendern sich mit jedem der beiden Regler -
+        // die Geste umfasst deshalb immer beide Parameter.
+        r->slider.onDragStart = [this]
+        {
+            for (auto* id : { Params::listenerX, Params::listenerY })
+                if (auto* prm = plugin.apvts.getParameter (id))
+                    prm->beginChangeGesture();
+        };
+        r->slider.onDragEnd = [this]
+        {
+            for (auto* id : { Params::listenerX, Params::listenerY })
+                if (auto* prm = plugin.apvts.getParameter (id))
+                    prm->endChangeGesture();
+        };
+    }
+    syncSeatSliders();
 
     for (auto* b : { &bypassDelay, &bypassGain })
     {
@@ -139,6 +185,15 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
         b->setColour (juce::ToggleButton::tickDisabledColourId, juce::Colours::white.withAlpha (0.28f));
         addAndMakeVisible (*b);
     }
+
+    // Kein Bypass, sondern eine Zuordnung - deshalb in der Farbe der
+    // uebrigen Bedienung statt in der der beiden Vergleichsschalter.
+    followHead.setColour (juce::ToggleButton::textColourId, Theme::textDim);
+    followHead.setColour (juce::ToggleButton::tickColourId, Theme::cyan);
+    followHead.setColour (juce::ToggleButton::tickDisabledColourId, juce::Colours::white.withAlpha (0.28f));
+    addAndMakeVisible (followHead);
+    followHeadAttach = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (
+        plugin.apvts, Params::followHead, followHead);
     bypassDelayAttach = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (
         plugin.apvts, Params::bypassDelay, bypassDelay);
     bypassGainAttach = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (
@@ -246,8 +301,41 @@ void HoerplatzEditor::setUpRow (Row& r, const char* paramId, bool primary)
     styleSlider (r.slider, primary);
     addAndMakeVisible (r.slider);
 
-    r.attach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
-        plugin.apvts, paramId, r.slider);
+    if (paramId != nullptr)
+        r.attach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+            plugin.apvts, paramId, r.slider);
+}
+
+void HoerplatzEditor::writeSeat()
+{
+    const auto get = [this] (const char* id) { return (double) plugin.apvts.getRawParameterValue (id)->load(); };
+
+    const Geometry::Point l { get (Params::leftX),  get (Params::leftY) };
+    const Geometry::Point r { get (Params::rightX), get (Params::rightY) };
+    const Geometry::Seat seat { listenerX.slider.getValue(), listenerY.slider.getValue() };
+    const auto world = Geometry::seatToWorld (l, r, seat);
+
+    for (auto [id, value] : { std::pair<const char*, double> { Params::listenerX, world.x },
+                              std::pair<const char*, double> { Params::listenerY, world.y } })
+        if (auto* prm = plugin.apvts.getParameter (id))
+            prm->setValueNotifyingHost (prm->convertTo0to1 ((float) value));
+}
+
+void HoerplatzEditor::syncSeatSliders()
+{
+    const auto get = [this] (const char* id) { return (double) plugin.apvts.getRawParameterValue (id)->load(); };
+
+    const auto seat = Geometry::seatOf ({ get (Params::leftX),  get (Params::leftY) },
+                                        { get (Params::rightX), get (Params::rightY) },
+                                        { get (Params::listenerX), get (Params::listenerY) });
+
+    // Wer gerade zieht, bestimmt - sonst folgt der Regler dem Parameter.
+    // Er folgt ihm auch dann, wenn eine Box verschoben wird: der Platz
+    // bleibt stehen, sein Abstand zur Achse aendert sich trotzdem.
+    if (! listenerX.slider.isMouseButtonDown())
+        listenerX.slider.setValue (seat.sideways, juce::dontSendNotification);
+    if (! listenerY.slider.isMouseButtonDown())
+        listenerY.slider.setValue (seat.distance, juce::dontSendNotification);
 }
 
 void HoerplatzEditor::applyLanguage()
@@ -267,6 +355,7 @@ void HoerplatzEditor::applyLanguage()
 
     bypassDelay.setButtonText (t.bypassDelay);
     bypassGain.setButtonText (t.bypassGain);
+    followHead.setButtonText (t.followHead);
 
     speakerDistance.slider.setTooltip (t.helpSpeakerDistance);
     roomWidth.slider.setTooltip (t.helpRoomWidth);
@@ -275,6 +364,7 @@ void HoerplatzEditor::applyLanguage()
     listenerY.slider.setTooltip (t.helpListenerY);
     bypassDelay.setTooltip (t.helpBypassDelay);
     bypassGain.setTooltip (t.helpBypassGain);
+    followHead.setTooltip (t.helpFollowHead);
     readout.setTooltip (t.helpReadout);
     helpButton.setTooltip (t.helpHints);
     langButton.setTooltip (t.helpLang);
@@ -423,10 +513,13 @@ void HoerplatzEditor::resized()
     gainAmountLabel.setBounds (knobArea.removeFromTop (16));
     gainAmountKnob.setBounds (knobArea);
 
-    // Die beiden Schalter stehen mittig zum Knopf daneben.
-    auto switches = bypassArea.withSizeKeepingCentre (bypassArea.getWidth(), 44);
-    bypassDelay.setBounds (switches.removeFromTop (22));
-    bypassGain.setBounds (switches.removeFromTop (22));
+    // Die drei Schalter stehen mittig zum Knopf daneben.
+    auto switches = bypassArea.withSizeKeepingCentre (bypassArea.getWidth(),
+                                                      juce::jmin (66, bypassArea.getHeight()));
+    const int switchHeight = juce::jmax (14, switches.getHeight() / 3);
+    bypassDelay.setBounds (switches.removeFromTop (switchHeight));
+    bypassGain.setBounds (switches.removeFromTop (switchHeight));
+    followHead.setBounds (switches.removeFromTop (switchHeight));
 
     // Das Testgeraeusch steht ueber dem Zahlenfeld: man greift danach,
     // waehrend man einstellt, und liest darunter ab, was dabei herauskommt.
@@ -470,6 +563,7 @@ void HoerplatzEditor::timerCallback()
     }
 
     updateArea();
+    syncSeatSliders();
     room.pollClipping();
     room.repaint();
     readout.repaint();

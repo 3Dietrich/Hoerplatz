@@ -29,6 +29,12 @@ namespace Params
     inline constexpr const char* bypassGain  = "byGain";
     inline constexpr const char* gainAmount  = "gainAmt";
 
+    // Sitzt man hinter der Aufstellung, steht die linke Box vom Platz aus
+    // rechts. Steht dieser Schalter an, gehen die Kanaele mit der
+    // Kopfrichtung mit - was links gehoert werden soll, kommt dann auch aus
+    // der Box, die von dort aus links steht.
+    inline constexpr const char* followHead  = "folgtKopf";
+
     // Sprache und Hilfe sind Sache der Oberflaeche, nicht des Klangs. Sie
     // liegen deshalb als Eigenschaften im gespeicherten Zustand und nicht
     // als automatisierbare Parameter.

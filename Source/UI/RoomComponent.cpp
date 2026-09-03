@@ -235,6 +235,36 @@ void RoomComponent::paint (juce::Graphics& g)
     drawSpeaker (g, rPos, std::atan2 (- (hPos.x - rPos.x), hPos.y - rPos.y), spkSize,
                  activeHandle == Handle::rightSpeaker, glow (1));
 
+    // L und R stehen an der Box, und zwar der Kanal, den sie traegt. Sitzt
+    // man hinter der Aufstellung, steht die linke Box vom Platz aus rechts;
+    // ist der Schalter an, gehen die Kanaele mit und die Buchstaben mit
+    // ihnen. Ist er aus, bleiben sie stehen - dann sieht man, dass das Bild
+    // spiegelverkehrt steht.
+    {
+        const auto& t = texts (lang);
+        const bool follows = processor.apvts.getRawParameterValue (Params::followHead)->load() > 0.5f;
+        const bool swapped = follows && a.mirrored;
+
+        const auto letter = [&] (juce::Point<float> pos, bool leftSpeaker)
+        {
+            // Der Buchstabe steht hinter der Box, vom Hoerplatz aus gesehen -
+            // dort ist Platz, die Wege zum Hoerplatz bleiben frei.
+            auto away = pos - hPos;
+            const float len = juce::jmax (1.0f, away.getDistanceFromOrigin());
+            const auto at = pos + away * ((spkSize * 0.62f + 9.0f) / len);
+
+            g.setColour (Theme::amber.withAlpha (0.85f));
+            g.setFont (juce::FontOptions (juce::Font::getDefaultMonospacedFontName(),
+                                          Theme::smallText + 1.0f, juce::Font::bold));
+            g.drawText (leftSpeaker != swapped ? t.speakerL : t.speakerR,
+                        juce::Rectangle<float> (at.x - 9.0f, at.y - 8.0f, 18.0f, 16.0f),
+                        juce::Justification::centred);
+        };
+
+        letter (lPos, true);
+        letter (rPos, false);
+    }
+
     // Hoerplatz: Fadenkreuz plus Kopf von oben in der besten Mittenstellung.
     const float headR = std::max (6.0f, 0.0875f * v.scale);
     {

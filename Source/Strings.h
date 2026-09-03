@@ -34,6 +34,7 @@ struct Texts
 
     Text bypassDelay;
     Text bypassGain;
+    Text followHead;
     Text gainAmount;
     Text testTone;
 
@@ -42,6 +43,8 @@ struct Texts
     Text gainRow;
     Text sideLeft;
     Text sideRight;
+    Text speakerL;       // Beschriftung an der Box, die den linken Kanal traegt
+    Text speakerR;
     Text centred;        // wenn beide Wege gleich lang sind
     Text off;            // Wert bei gesetztem Bypass
 
@@ -58,6 +61,7 @@ struct Texts
     Text helpListenerY;
     Text helpBypassDelay;
     Text helpBypassGain;
+    Text helpFollowHead;
     Text helpGainAmount;
     Text helpTestTone;
     Text helpReadout;

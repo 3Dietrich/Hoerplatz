@@ -52,6 +52,11 @@ namespace Geometry
         double baseAngleDeg = 0.0;  // Oeffnungswinkel Box-Hoerer-Box (Grad), Ideal 60
         double headAngleDeg = 0.0;  // Blickrichtung gegen "geradeaus", + = nach rechts gedreht
 
+        // Vom Platz aus gesehen steht die als "links" gefuehrte Box rechts -
+        // so ist es, sobald man hinter der Aufstellung sitzt. Der Kopf dreht
+        // sich dann herum, und mit ihm tauschen die Seiten.
+        bool mirrored = false;
+
         // Welche Seite korrigiert wird - die naehere. Bei gleichen Wegen
         // steht der Hoerplatz mittig und es gibt nichts zu tun.
         bool leftIsNearer() const { return distL < distR; }
@@ -104,6 +109,10 @@ namespace Geometry
         a.gainL = std::pow (a.distL / a.distR, half);
         a.gainR = std::pow (a.distR / a.distL, half);
 
+        // Seitenvertauschung: das Vorzeichen des Kreuzprodukts der beiden
+        // Blickrichtungen sagt, ob die linke Box vom Platz aus links liegt.
+        a.mirrored = (lx * ry - ly * rx) < 0.0;
+
         // Richtungen zu den Boxen, normiert.
         const double nlx = lx / a.distL, nly = ly / a.distL;
         const double nrx = rx / a.distR, nry = ry / a.distR;
@@ -124,6 +133,60 @@ namespace Geometry
                        : std::atan2 (bx, -by) * 180.0 / M_PI;
 
         return a;
+    }
+
+    // Bezugssystem der Aufstellung: die Mitte zwischen den Boxen, die Achse
+    // durch beide, und die Senkrechte darauf in den Raum hinein.
+    struct Frame
+    {
+        Point mid    { 0.0, 0.0 };
+        Point along  { 1.0, 0.0 };   // von der linken zur rechten Box
+        Point across { 0.0, 1.0 };   // senkrecht dazu, in den Raum
+    };
+
+    inline Frame frameOf (Point left, Point right)
+    {
+        Frame f;
+        f.mid = { (left.x + right.x) * 0.5, (left.y + right.y) * 0.5 };
+
+        const double dx = right.x - left.x;
+        const double dy = right.y - left.y;
+        const double len = std::sqrt (dx * dx + dy * dy);
+
+        // Stehen beide Boxen aufeinander, gibt es keine Achse - dann bleibt
+        // es bei der waagerechten Vorgabe.
+        if (len > 1.0e-6)
+            f.along = { dx / len, dy / len };
+
+        f.across = { -f.along.y, f.along.x };
+        return f;
+    }
+
+    // Der Hoerplatz, gemessen an der Aufstellung statt am Raum: quer der
+    // Versatz aus der Mitte zwischen den Boxen, laengs der Abstand zur Achse
+    // zwischen ihnen. Gehoert wird die Aufstellung, nicht die Wand hinter
+    // ihr - deshalb ist sie der Bezug. Ein negativer Abstand heisst: der
+    // Platz liegt hinter der Achse.
+    struct Seat
+    {
+        double sideways = 0.0;
+        double distance = 0.0;
+    };
+
+    inline Seat seatOf (Point left, Point right, Point listener)
+    {
+        const auto f = frameOf (left, right);
+        const double dx = listener.x - f.mid.x;
+        const double dy = listener.y - f.mid.y;
+        return { dx * f.along.x  + dy * f.along.y,
+                 dx * f.across.x + dy * f.across.y };
+    }
+
+    inline Point seatToWorld (Point left, Point right, Seat seat)
+    {
+        const auto f = frameOf (left, right);
+        return { f.mid.x + f.along.x * seat.sideways + f.across.x * seat.distance,
+                 f.mid.y + f.along.y * seat.sideways + f.across.y * seat.distance };
     }
 
     // Abstand der beiden Boxen voneinander.

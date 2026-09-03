@@ -52,7 +52,17 @@ private:
     // Farben und kleinere Schrift - und dass sie als erste weichen, wenn das
     // Fenster klein wird.
     void styleSlider (juce::Slider&, bool primary);
+
+    // Ohne Parameterkennung bleibt der Regler ohne Anbindung - so sind die
+    // beiden Hoerplatz-Regler gebaut, die nicht den Parameter selbst zeigen,
+    // sondern den Platz an der Aufstellung gemessen.
     void setUpRow (Row&, const char* paramId, bool primary);
+
+    // Der Hoerplatz wird an der Achse zwischen den Boxen gemessen, die
+    // Parameter fuehren dagegen Weltkoordinaten. Diese beiden rechnen
+    // zwischen beidem hin und her.
+    void writeSeat();
+    void syncSeatSliders();
 
     HoerplatzProcessor& plugin;
 
@@ -61,14 +71,15 @@ private:
 
     Row speakerDistance, roomWidth, roomDepth, listenerX, listenerY;
 
-    juce::ToggleButton bypassDelay, bypassGain;
+    juce::ToggleButton bypassDelay, bypassGain, followHead;
 
     // Wie weit der Pegelausgleich geht - steht beim Pegel-Bypass, weil beide
     // dasselbe betreffen.
     juce::Slider gainAmountKnob;
     juce::Label gainAmountLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAmountAttach;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassDelayAttach, bypassGainAttach;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassDelayAttach, bypassGainAttach,
+                                                                          followHeadAttach;
 
     juce::Label areaLabel;
 

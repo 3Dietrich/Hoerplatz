@@ -52,16 +52,27 @@ juce::AudioProcessorValueTreeState::ParameterLayout Params::createLayout()
     // Hoerplatz in Metern, Ursprung = Mitte der vorderen Wand. Als Parameter
     // gefuehrt, damit er sich automatisieren und im Projekt speichern
     // laesst - das Ziehen im Grundriss schreibt denselben Wert.
-    layout.add (makeFloat (listenerX, "Hoerplatz seitlich", -12.0f, 12.0f, 0.00f));
+    //
+    // Der Name sagt "im Raum", weil hier Weltkoordinaten stehen. Die beiden
+    // Regler der Oberflaeche zeigen den Platz dagegen an der Aufstellung
+    // gemessen - quer aus der Mitte zwischen den Boxen, laengs senkrecht zur
+    // Achse zwischen ihnen - und rechnen zwischen beidem um.
+    layout.add (makeFloat (listenerX, "Hoerplatz X im Raum", -12.0f, 12.0f, 0.00f));
 
     // Startwert: das gleichseitige Dreieck zur Standardaufstellung - die
     // uebliche Ausgangslage fuer Stereo.
-    layout.add (makeFloat (listenerY, "Hoerplatz Abstand",   -1.0f, 20.0f, 5.11f));
+    layout.add (makeFloat (listenerY, "Hoerplatz Y im Raum",  -1.0f, 20.0f, 5.11f));
 
     layout.add (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { bypassDelay, 1 }, "Bypass Laufzeit", false));
     layout.add (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { bypassGain, 1 }, "Bypass Pegel", false));
+
+    // Vorgabe an: sitzt man hinter der Aufstellung, sollen die Kanaele von
+    // selbst mitgehen - sonst steht das Stereobild spiegelverkehrt, ohne
+    // dass etwas darauf hinweist.
+    layout.add (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { followHead, 1 }, "L/R folgen Kopfrichtung", true));
 
     // Wie weit der Pegelausgleich geht. 100 % ist die Rechnung nach 1/r, wie
     // sie im Freien gilt. In einem Raum kommt Diffusschall dazu: der

@@ -29,6 +29,40 @@ namespace
 
 int main()
 {
+    // Der Hoerplatz, an der Aufstellung gemessen: quer aus der Mitte
+    // zwischen den Boxen, laengs senkrecht zur Achse zwischen ihnen. Die
+    // Wand hinter den Boxen spielt dabei keine Rolle.
+    {
+        const auto s = Geometry::seatOf (boxL, boxR, { 0.0, 3.35 });
+        CHECK (near (s.sideways, 0.0));
+        CHECK (near (s.distance, 3.0));     // nicht 3,35 - die Boxen stehen 35 cm vor der Wand
+
+        // Schraege Aufstellung: die Achse kippt mit, der Abstand bleibt der
+        // senkrechte. Hin und zurueck muss denselben Punkt ergeben.
+        const Geometry::Point l { -2.0, 1.0 }, r { 2.0, 3.0 };
+        const Geometry::Point seat { -0.4, 4.2 };
+        const auto sc = Geometry::seatOf (l, r, seat);
+        const auto back = Geometry::seatToWorld (l, r, sc);
+        CHECK (near (back.x, seat.x, 1e-12) && near (back.y, seat.y, 1e-12));
+
+        // Der senkrechte Abstand ist der kuerzeste zur Achse - jeder Punkt
+        // auf ihr liegt weiter weg.
+        const auto foot = Geometry::seatToWorld (l, r, { sc.sideways, 0.0 });
+        const double dx = seat.x - foot.x, dy = seat.y - foot.y;
+        CHECK (near (std::sqrt (dx * dx + dy * dy), std::fabs (sc.distance), 1e-12));
+
+        // Hinter der Achse wird der Abstand negativ.
+        CHECK (Geometry::seatOf (boxL, boxR, { 0.0, -0.65 }).distance < 0.0);
+    }
+
+    // Seitenvertauschung: vor der Aufstellung liegt die linke Box links,
+    // dahinter rechts.
+    {
+        CHECK (! Geometry::compute (boxL, boxR, { 0.0, 3.35 }).mirrored);
+        CHECK (  Geometry::compute (boxL, boxR, { 0.0, -0.65 }).mirrored);
+        CHECK (! Geometry::compute (boxL, boxR, { -2.6, 0.40 }).mirrored);
+    }
+
     // Mittig vor den Boxen: nichts zu tun.
     {
         const auto a = Geometry::compute (boxL, boxR, { 0.0, 3.35 });
