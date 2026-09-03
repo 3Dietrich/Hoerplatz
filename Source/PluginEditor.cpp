@@ -2,6 +2,7 @@
 #include "UI/Theme.h"
 
 #include <cmath>
+#include <iterator>
 
 namespace
 {
@@ -263,8 +264,10 @@ HoerplatzEditor::HoerplatzEditor (HoerplatzProcessor& p)
     setSize (940, 560);
     setResizable (true, true);
     // Klein genug, dass nur noch das Noetige dasteht: Boxenabstand,
-    // Hoerplatz, die beiden Bypaesse mit dem Ausgleich, das Testgeraeusch.
-    setResizeLimits (300, 250, 1800, 1200);
+    // Hoerplatz, die Schalter mit dem Ausgleich, das Testgeraeusch. Breiter
+    // als 460 Punkte wird die Reglerspalte nicht, auch nicht im breiten
+    // Fenster - dort steht daneben der Grundriss.
+    setResizeLimits (220, 250, 1800, 1200);
 
     startTimerHz (30);
 }
@@ -432,52 +435,82 @@ void HoerplatzEditor::resized()
     buttons.removeFromRight (4);
     langButton.setBounds (buttons.removeFromRight (34));
 
-    // Der Grundriss braucht Platz, um etwas zu zeigen. Ist das Fenster zu
-    // eng oder zu flach, faellt er weg - und mit ihm die Raummasse, die ohne
-    // ihn nichts mehr bedeuten.
-    const bool showPlan = getWidth() >= 620 && getHeight() >= 360;
+    // Die Spalte mit den Reglern hat ein Mass, ueber das hinaus sie nichts
+    // gewinnt: breiter werden nur die Balken, waehrend Beschriftung und Zahl
+    // stehen bleiben. Nach unten braucht sie so viel, dass die Zeilen noch
+    // nebeneinander stehen koennen.
+    constexpr int sideMax = 460;
+    constexpr int sideMin = 230;   // darunter bricht die Beschriftung der Schalter um
+    constexpr int planMin = 150;
+
+    // Der Grundriss ist das, woran man sich orientiert - er bleibt, solange
+    // ueberhaupt Platz fuer eine Zeichnung da ist. Was neben ihm zuerst
+    // weicht, sind die Raummasse: sie kosten zwei Zeilen, die dem Einstellen
+    // fehlen. Sie stehen deshalb weiter unten in der Reihenfolge.
+    const bool showPlan = area.getWidth() >= sideMin + planMin && area.getHeight() >= planMin;
     room.setVisible (showPlan);
-    for (auto* r : { &roomWidth, &roomDepth })
-    {
-        r->label.setVisible (showPlan);
-        r->slider.setVisible (showPlan);
-    }
-    areaLabel.setVisible (showPlan);
 
     auto side = area;
     if (showPlan)
     {
-        side = area.removeFromRight (juce::jmin (300, area.getWidth() / 2));
+        // Ein Drittel fuer die Regler, aber nie mehr als das Mass und nie
+        // weniger, als sie zum Stehen brauchen.
+        side = area.removeFromRight (juce::jlimit (sideMin, sideMax, area.getWidth() / 3));
         room.setBounds (area.reduced (6));
+    }
+    else
+    {
+        // Ohne Grundriss bleibt der Rest leer, statt die Regler ueber die
+        // ganze Breite zu ziehen.
+        side = area.removeFromLeft (juce::jmin (sideMax, area.getWidth()));
     }
     side = side.reduced (10, 8);
 
-    // Aus der Hoehe folgt, wieviel hineinpasst. Zuerst wird das Zahlenfeld
-    // aufgegeben, dann ruecken Beschriftung und Regler in eine Zeile
-    // zusammen. Was bleibt, ist das, womit man einstellt.
+    // Aus der Hoehe folgt, wieviel hineinpasst. Die Reihenfolge sagt, worauf
+    // am ehesten verzichtet wird: zuerst das Zahlenfeld, dann ruecken
+    // Beschriftung und Regler in eine Zeile zusammen, zuletzt gehen die
+    // Raummasse. Was bleibt, ist der Grundriss und das, womit man einstellt.
     constexpr int bypassHeight = 78;
     constexpr int testHeight = 26;
-    const int rowCount = 3 + (showPlan ? 2 : 0);
-    const int extras = showPlan ? 24 : 0;              // Flaechenanzeige
 
-    const auto needed = [&] (int rowHeight, bool withReadout)
+    const auto needed = [&] (int rowHeight, bool withRoomRows, bool withReadout)
     {
-        return rowCount * rowHeight + extras + 4 + bypassHeight
-             + 12 + testHeight + (withReadout ? 78 : 0);
+        return (withRoomRows ? 5 : 3) * rowHeight
+             + (withRoomRows ? 24 : 0)                 // Flaechenanzeige
+             + 4 + bypassHeight + 12 + testHeight
+             + (withReadout ? 78 : 0);
     };
 
-    int rowHeight = 43;
-    bool showReadout = true;
-    if (needed (rowHeight, true) > side.getHeight())
+    struct Fit { int rowHeight; bool roomRows, readout; };
+    constexpr Fit order[]
     {
-        showReadout = false;
-        if (needed (rowHeight, false) > side.getHeight())
+        { 43, true,  true  }, { 43, true,  false },
+        { 25, true,  true  }, { 25, true,  false },
+        { 25, false, true  }, { 25, false, false }
+    };
+
+    Fit fit = order[std::size (order) - 1];
+    for (const auto& candidate : order)
+    {
+        if (candidate.roomRows && ! showPlan)
+            continue;
+        if (needed (candidate.rowHeight, candidate.roomRows, candidate.readout) <= side.getHeight())
         {
-            rowHeight = 25;
-            showReadout = needed (rowHeight, true) <= side.getHeight();
+            fit = candidate;
+            break;
         }
     }
-    const bool tightRows = rowHeight < 43;
+
+    const bool showRoomRows = fit.roomRows && showPlan;
+    const bool tightRows = fit.rowHeight < 43;
+    const bool showReadout = fit.readout;
+
+    for (auto* r : { &roomWidth, &roomDepth })
+    {
+        r->label.setVisible (showRoomRows);
+        r->slider.setVisible (showRoomRows);
+    }
+    areaLabel.setVisible (showRoomRows);
     readout.setVisible (showReadout);
 
     auto place = [&] (Row& r)
@@ -497,7 +530,7 @@ void HoerplatzEditor::resized()
     };
 
     place (speakerDistance);
-    if (showPlan)
+    if (showRoomRows)
     {
         place (roomWidth);
         place (roomDepth);
@@ -509,7 +542,7 @@ void HoerplatzEditor::resized()
 
     side.removeFromTop (4);
     auto bypassArea = side.removeFromTop (juce::jmin (bypassHeight, side.getHeight()));
-    auto knobArea = bypassArea.removeFromRight (78);
+    auto knobArea = bypassArea.removeFromRight (juce::jmin (78, bypassArea.getWidth() / 3));
     gainAmountLabel.setBounds (knobArea.removeFromTop (16));
     gainAmountKnob.setBounds (knobArea);
 

@@ -200,6 +200,12 @@ void RoomComponent::paint (juce::Graphics& g)
     // Wege vom Hoerplatz zu den Boxen, mit ihrer Laenge beschriftet. Beide
     // gleich hell: es sind zwei Wege zu zwei Ohren, keiner ist wichtiger als
     // der andere. Welcher der laengere ist, sagen die Zahlen.
+    //
+    // Im kleinen Grundriss bleiben die Linien und die Zahlen gehen: sie
+    // ruecken dort so dicht zusammen, dass sie uebereinander stehen. Der
+    // Grundriss zeigt dann die Lage, die Zahlen stehen bei den Reglern.
+    const bool showLengths = v.room.getWidth() >= 130.0f && v.room.getHeight() >= 110.0f;
+
     for (int side = 0; side < 2; ++side)
     {
         const auto from = (side == 0 ? lPos : rPos);
@@ -207,6 +213,9 @@ void RoomComponent::paint (juce::Graphics& g)
 
         g.setColour (juce::Colours::white.withAlpha (0.24f));
         g.drawLine ({ from, hPos }, 1.2f);
+
+        if (! showLengths)
+            continue;
 
         const auto mid = from + (hPos - from) * 0.55f;
         g.setColour (Theme::textDim.withAlpha (0.85f));
